@@ -1,0 +1,11 @@
+from building import *
+
+src = Split("""
+test_pipe.c
+""")
+
+group = DefineGroup('examples', src,
+                    depend = ['RT_USING_COMPONENTS_DRIVERS_PIPE', 'RT_USING_COMPONENTS_DRIVERS_PIPE_TEST'],
+                    CPPPATH=[GetCurrentDir()])
+
+Return('group')
