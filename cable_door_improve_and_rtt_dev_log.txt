@@ -1,0 +1,1629 @@
+1.
+    zigbee mesh组网
+2.
+    网关存储权限信息保证临时
+3.
+    网络的优化，增加mqtt的接口
+4.
+    stm32f103rct6+enc28j60+sdio
+    权限按行记录，每行一个json包。
+5.
+    一路spi用来接网口，一路用来驱动zigbee。
+6.
+    网关优化策略：
+    网关的设计为了保证稳定性，设计成带远程供电线连接模式和本地供电模式。
+7.
+    面向对象的思想也要用到一些基本的IO操作中去，如在驱动ZNP时的SPI直接IO通信，最好面向对象来做。
+    为了提高效率，不需要每次都查找打开关闭设备，可以设置全局变量或全局指针。
+    spi和uart只是基础通信设备，更深层的可以发现。
+    uart->serial
+    spi->enc28j60
+        ->w25qxx
+    所以是否可以设置成
+    spi->zap呢？？？
+    要做成设备的话，设备有一个rx_indicate和tx_complete，做成zap设备的话，要实现这两个函数。
+    觉得可以模仿一下finsh。
+8.
+    之前的znp的模式是采用的hal_poll轮询的模式，固然我们的驱动也要采用轮询来监听消息包。
+    但是znp的主动发送也包含在轮询中，所以会造成监听和发送的冲突。
+9.
+    rtt portal设备，rx_indicate和tx_complete都是实现了的，可以参照。
+10.
+    finsh->serial->uart
+    zap->zigbee_spi->spi
+11.
+    finsh是一个庞大的组件，由在shell.c中的线程负责数据收发，然后让其他层处理。
+12.
+    调用rtt的spi通信接口，和用hal实现的zap相差无异，但是只读写一个字符呢，如何做好缓冲式读取。
+    由于外设设备（通过uart或spi），在数据收发上不能等待，故serial层的作用是，协调批量读写的数据包，
+    供上层分段解析。
+    话说，serial设备只能挂载uart线吗？可以挂载spi或者iic线吗？
+    对zap spi设备的实现，可以模拟serial的FIFO模式
+13.
+    enc28j60中的spi数据接收，是采用的IO口中断通知，然后边接收边解析的模式，在znp的通信时序中，也有IO中断通知的方法。
+14.
+    串口存在边发送边接收的模式，但是SPI由于是发送接收同步进行的，所以在cc2530的控制器里，会协调发送接收，不会冲突。
+    enc28j60的中断处理模式。
+    接收到IO口中断后，发送了一个设备的地址给一个处理线程邮箱，邮箱判断后读取设备中的数据包。
+    enc28j60中实现了spi_read_op，spi_write_op，enc28j60_clkout，enc28j60_set_bank这些特定的通信方式，\
+        本质上都是调用底层通信接口通信，但是把通信的需求拎了出来，方便理解和调用。
+15.
+    znp的srdy pin除了作为信号中断，还在通信过程中作为一个旗标，所以要不停的开关中断。
+    现在决定优化srdy的通信方案，增加一个判断IO。
+    涉及到中断的那个srdy主要是areq。
+    针对stm32f103rct6
+    MRDY        P0_5    PC6
+    SRDY_INT    P0_6    PC7
+    SRDY_POLL   P0_4    PC5
+    先rt_pin_attach_irq
+    后pin_irq_enable
+        采用中断机制速率太快了，来不及处理osal的任务。
+16.
+    网关的话，不带wifi的就用stm32f103rct6好了，带wifi的用zet6或407vet6。
+    rtt的spi接口，默认不设置发送区数据指针的话，会发送0xFF，但是之前的调试出了问题，发送0x00比较妥当。
+17.
+    传统的zap接口，还是采用的老式的OSAL poll模式，这样的任务轮询，每次poll只能处理一个任务。
+18.
+    以后的svn版本管理，工程配置是不需要加入版本库的，直接拷贝覆盖。
+19.
+    cc2530+flash+pfatfs，可以存储少量数据。
+20.
+    stm32f1系列和stm32f4系列的tick设置不同。
+    void  SysTick_Configuration(void)
+    {
+        RCC_ClocksTypeDef  rcc_clocks;
+        rt_uint32_t         cnts;
+
+        RCC_GetClocksFreq(&rcc_clocks);
+
+        cnts = (rt_uint32_t)rcc_clocks.HCLK_Frequency / RT_TICK_PER_SECOND;
+        cnts = cnts / 8;
+
+        SysTick_Config(cnts);
+        SysTick_CLKSourceConfig(SysTick_CLKSource_HCLK_Div8);
+    }
+
+    /* Configure the SysTick */
+    SysTick_Config( SystemCoreClock / RT_TICK_PER_SECOND );
+21.
+    如何依照ZAP的协议，把ZNP通信流做成一个驱动，这样可以适配到所有的zigbee\蓝牙设备
+    而且基于osal poll的模式，效率太低下。
+22.
+    zap的数据接收，采用裸邮箱发送到tx_mb，然后json封装
+23.
+    针对每个应用，维护多个数据结构。
+    在mcu中做部分存储的同时，也要上传到上层。
+24.
+    真实的固件更新流程
+    1.
+        服务端有了新的固件文件，询问当前dongle下面挂载的每个设备的固件版本
+    2.
+        针对需要更新固件的节点，进行ota挂载，就是一些结构体的数据记录工作
+    3.
+        固件升级
+    4.
+        ota卸载
+25.
+    stm32+pn532输出韦根信号的读卡器。
+    在stm32f107的开发板上，将目前没有用到的spi的两个口使用起来。
+    PA5 PA7
+    通过rt_object_find来寻找一些定义在另外空间的个头组件，包括信号量、事件、邮箱、消息、设备等
+    涉及到邮箱和互斥量的线程，占用的栈空间不低于512
+
+    采用动态内存开辟的mb包指针有个问题，如果邮件一直没有被取回，是不是内存就会一直被占用。
+26.
+    小米平衡车的5眼通信接口，淘宝上买个换
+27.
+    CBT6的RAM 存储太小 ，开了韦根就不能开文件系统
+    不清楚为什么CBT6必须要设置pin为100才能完成pn532的初始化和通信
+    感觉普通的stm32单片机驱动输出韦根信号有问题，貌似要转换成5V的TTL电平信号。
+28.
+    网关的引脚直接连接到cc2530的rst脚会有问题，每次stm32重启会带动cc2530重启
+    要把stm32的控制引脚配置成高阻状态或其他不影响cc2530运行的状态。
+29.
+    OTA节点上电启动
+        OTA_ProcessZDOMsgs
+30.
+    目前先把所有的数据结构全部放到云端，之后可能会放部分数据结构到MCU中。
+    把无符号字节转换成int型并打印出来不现实，会变成有符号数，先用int数组转换就会好很多。
+    int intNum = 0x000000FF & uint8Num;
+31.
+    MT_ZdoDirectCB，这个函数发送了0x86的反馈。
+    AF_INCOMING_MSG_CMD
+        ->  ZDP_IncomingData
+            ->  MT_ZdoDirectCB
+    MT_ZdoDirectCB的数据包是要自己解析的。
+    节点
+        ZDO_ProcessMatchDescReq 
+            ->  ZDP_EPRsp
+    MT_ZdoDirectCB
+32.
+    固件升级流程
+    1.  获取设备的属性信息
+    2.  通知设备进行固件升级，查看匹配度
+    3.  进行固件升级
+    
+    //json
+    #J{"download_type":0,"mt_type":9,"mt_cmd":0,"mt_src_ep":20,"mt_src_req_cmd":0,"mt_dst_ep":20,"mt_dst_addr_mode":2,"mt_dst_addr_short_addr":21593,"mt_zcl_cmd":0,"mt_zcl_cluster":25,"mt_zcl_attr_ids":[0,1,2,3,4]}
+33.
+    在json包转回来时，注意要转成相应的uint8数据
+    直接传递json结构体给相应的应用，解析然后发送
+34.
+    zap的通信，明明配置了io口，但是发送拉低信号没有反应
+    stm32的io口速率比cc2530快，cc2530还没有判断为中断时，状态已经过去了。
+    rtt的串口dma处理，还是不要分批次读写，只读一次，不然会dma卡顿
+    spi通信流程没有问题，但是不能被卡顿
+//attr req
+#J{"download_type":0,"mt_type":9,"mt_cmd":0,"mt_src_ep":20,"mt_src_req_cmd":0,"mt_dst_ep":14,"mt_dst_addr_mode":2,"mt_dst_addr_short_addr":42472,"mt_zcl_cmd":0,"mt_zcl_cluster":25,"mt_zcl_attr_ids":[0,1,2,3,4,5,6,7]}
+//image notify req
+#J{"download_type":0,"mt_type":9,"mt_cmd":0,"mt_src_ep":20,"mt_src_req_cmd":1,"mt_dst_ep":14,"mt_dst_addr_mode":2,"mt_dst_addr_short_addr":42472}
+//discover req
+#J{"download_type":0,"mt_type":9,"mt_cmd":0,"mt_src_ep":20,"mt_src_req_cmd":2}
+//join req
+#J{"download_type":0,"mt_type":9,"mt_cmd":0,"mt_src_ep":20,"mt_src_req_cmd":3,"mt_intend_panid":1,"mt_intend_channel":2}
+//app leave req
+#J{"download_type":0,"mt_type":9,"mt_cmd":0,"mt_src_ep":20,"mt_src_req_cmd":4}
+
+35.
+    znp的spi要设置一个时钟，定期清楚僵硬的状态机。
+    特性读取，一次性只能读7条
+36.
+    2017.12.6
+    开始针对各种应用编写基于znp和zap的通信协议代码并测试，基本测试通过后，附加OTA功能。
+
+    研究一下stm32驱动cc2520的接口。
+
+37.
+    缩减cjson和邮箱的处理可以缩小code占用量
+38.
+    zap中发送的sreq消息包，znp中都要有相应的处理，不然会卡住。
+39.
+    if ( zdpExternalStateTaskID != -1 )
+    {  
+        zdoSendStateChangeMsg( state, zdpExternalStateTaskID );
+    }
+    这块会给MT层发状态改变的消息。
+40.
+    zclHA_Init，这个注册函数会把应用与zcl的taskid绑定。
+
+WG门禁代码优化
+1.
+    多线程的mysql访问。
+    如果你用线程的编程，你应该用--with-thread-safe-client编译MySQL C API，这将使C API线程对每个连接更安全。你可以让2个线程共享相同的连接，只要如果你做下列事情：
+    两个线程不能同时在同一个连接上发送查询到MySQL。特别是你必须保证在一个mysql_query()和mysql_store_result()之间没有其他线程正在使用同一个连接。
+    许多线程能存取用mysql_store_result()检索出来的不同结果集合。
+    如果你使用mysql_use_result，你必须保证没有其他线程在同一个连接上正在询问任何东西，直到结果集合被关闭。
+
+    设计如下线程，验证上述内容, Thread1和Thread2使用同一个mysql连接，执行select语句：
+    Thread1:                    Thread2:
+    mysql_query();              sleep(1);
+    | |
+    | |
+    sleep(2);                   mysql_query();
+    | |
+    | |
+    mysql_store_result();       mysql_store_result();
+    线程2中调用mysql_query()时出错，通过mysql_error()返回的错误信息为：Commands out of sync; you can’t run this command now.
+
+    解决方法1：
+    一个线程分配一个mysql连接
+    解决方法2：
+    在mysql_query()之前加上线程锁，在mysql_store_result()之后释放线程锁,
+
+    pthread_mutex_lock();
+    |
+    |
+    mysql_query();
+    |
+    |
+    mysql_store_result();
+    |
+    |
+    pthread_mutex_unlock();
+
+    不得以要用多线程，大概确定要注意这些：
+    （1）使mysql_real_connect()线程安全。（再次编译：shell> ./configure --enable-thread-safe-client）
+    -------------------------------------
+    （2）一个连接上，要确保在mysql_query()和mysql_store_result()之间，只有一个线程。
+    （大多Mysql数据库封装类库顾不到多线程，别用任何类库）
+    ------------------------------------
+
+    请指导，还有哪些要注意的，譬如，要改成INNODB的结构吗？
+    ---------------问题补充---------------
+
+    mysql的多线程安全问题
+    1 开启事务之前需要rollback 连接句柄。（清理垃圾）
+    2 mysql_ping 失败，程序需要处理重连逻辑；
+    3 mysql_query()执行的SQL语句是一个以‘/0’结尾的字符串，而mysql_real_query()执行的字符串长度是参数指定的，因此，前者不能不能包含二进制数据（二进制数据中可能会包含‘/0’，导致被认为到达字符串末尾）
+    实际使用中，推荐使用mysql_real_query
+    4 mysql C API   中SQL不需要 ';' 结尾；
+    5 mysql 转义；（老问题了）
+    6 所有update 语句，建议后边调用函数判断受影响的行数，是否是自己预期值；
+    7 mysql_real_connect 需要设置连接超时时间，特别是处理重连逻辑的时候，以免程序堵死；
+    8 程序rollback时候， 需要习惯性的校验应用的错误码，避免错误码没有赋值，调用者以为调用成功，造成漏洞；
+    9 多线程环境下使用libmysqlclient_r 库，非libmysqlclient 库
+    10 mysql_real_connect/mysql_init 多线程环境下调用需要加锁；
+    11 使用mysql_real_escape_string， 需要注意目标缓冲区是 2*n+1 大小；
+    12 mysql_store_result 这个函数是分配的内存的。 使用完需要释放，避免内存泄露；
+
+    13 mysql的事务尽量小，使用完，立即commit或rollback.不要起一个过大的事务。
+    14 mysql的隔离级别注意使用 Read Commited。不然会产生锁间隙的问题。
+    15 避免尝试去锁一个不存在的记录，for update语句where条件请使用主键(锁定一个非主键，会默认同时锁定一个主键，这是造成很多死锁的原因)。避免过多的for update。
+    16 select语句必须使用索引，where条件避免使用 or 或者在条件中运用运算表达式，会造成索引失效。
+    17 联合索引可以替代单独的索引。如果已有联合索引，不需要重复建立单独的索引。索引过多会导致插入变慢。注意是联合索引的第一个可以省略。 避过（f1,f2),可以省略f1的单独索引，但是不能省略f2的单独索引。
+    18 where条件，结果集不要太大，如果超过30%，索引会时效，会导致mysql扫描全表。不确定时，请用explain做检测。
+    19 mysql单表记录保持在1000W以下，以获得较好的性能。
+    20 mysql数据库链接数不能过多，请保持在200以下。
+    21 修改mysql 锁等待时间，默认为50s,避免for update等待时间超长，造成系统阻塞 innodb_lock_wait_timeout(修改这个属性需要重启数据库)
+    22 如果启用事务，可以不必显示的设置set autocommit=0，即使当时autocommit模式为1(直接提交模式)，可以通过begin/commit来隐式的调用。
+    如果不使用事务，则必须显示的调用 set autocommit=1.因为不能确定，是否某长链接中，有人设置了set autocommit=0.
+    
+2.
+    mysql连接断开的问题，mysql的服务中断。在处理线程时连接时就会连接失败，这时要显式的通知有关捕捉单位，重启连接或其他操作。
+3.
+    晶振电容的问题，stm32f107rct6的韦根读卡器，主晶振电容要220pf,1M
+
+beagle bone
+用5V供电，则可以启用Usb Host接口
+
+
+-DCONFIG_STM32_STM32F407
+
+-DCONFIG_ARCH_BOARD_STM32F4_DISCOVERY=1
+-DCONFIG_ARCH_BOARD="stm32f4discovery"
+-DCONFIG_ARCH_BUTTONS=1
+-DCONFIG_ARCH_CHIP_STM32=1
+-DCONFIG_ARCH_CHIP_STM32F407VG=1
+-DCONFIG_ARCH_STACKDUMP=1
+-DCONFIG_ARCH="arm"
+-DCONFIG_ARMV7M_TOOLCHAIN_CODESOURCERYW=1
+-DCONFIG_BOARD_LOOPSPERMSEC=16717
+-DCONFIG_BUILTIN=1
+-DCONFIG_DISABLE_POLL=1
+-DCONFIG_ETH0_PHY_LAN8720=1
+-DCONFIG_EXAMPLES_NSH_CXXINITIALIZE=1
+-DCONFIG_EXAMPLES_NSH=1
+
+
+-DCONFIG_HAVE_CXX=1
+-DCONFIG_HAVE_CXXINITIALIZE=1
+-DCONFIG_HOST_WINDOWS=1
+-DCONFIG_INTELHEX_BINARY=1
+-DCONFIG_MAX_TASKS=16
+-DCONFIG_MAX_WDOGPARMS=2
+-DCONFIG_MMCSD_MULTIBLOCK_DISABLE=1
+-DCONFIG_MMCSD_SDIO=1
+-DCONFIG_MMCSD=1
+-DCONFIG_NET_BROADCAST=1
+-DCONFIG_NET_ETH_MTU=590
+-DCONFIG_NET_ETH_TCP_RECVWNDO=536
+-DCONFIG_NET_HOSTNAME="STM32F4-Discovery"
+-DCONFIG_NET_ICMPv6_NEIGHBOR=1
+-DCONFIG_NET_ICMPv6_PING=1
+-DCONFIG_NET_ICMPv6=1
+
+-DCONFIG_NET_SOCKOPTS=1
+-DCONFIG_NET_SOLINGER=1
+-DCONFIG_NET_TCP_WRITE_BUFFERS=1
+-DCONFIG_NET_TCP=1
+-DCONFIG_NET_TCPBACKLOG=1
+-DCONFIG_NET_UDP=1
+-DCONFIG_NET=1
+-DCONFIG_NFILE_DESCRIPTORS=8
+-DCONFIG_NFILE_STREAMS=8
+-DCONFIG_NSH_ARCHINIT=1
+-DCONFIG_NSH_BUILTIN_APPS=1
+-DCONFIG_NSH_FILEIOSIZE=512
+-DCONFIG_NSH_IPv6NETMASK_8=0xff80
+-DCONFIG_NSH_LINELEN=64
+-DCONFIG_NSH_NOMAC=1
+-DCONFIG_NSH_READLINE=1
+-DCONFIG_PREALLOC_MQ_MSGS=4
+-DCONFIG_PREALLOC_TIMERS=4
+-DCONFIG_PREALLOC_WDOGS=16
+-DCONFIG_RAM_SIZE=114688
+-DCONFIG_RAM_START=0x20000000
+-DCONFIG_RAW_BINARY=1
+-DCONFIG_RR_INTERVAL=200
+-DCONFIG_SCHED_HPWORK=1
+-DCONFIG_SCHED_HPWORKPRIORITY=192
+-DCONFIG_SCHED_WAITPID=1
+-DCONFIG_SDCLONE_DISABLE=1
+-DCONFIG_START_DAY=13
+-DCONFIG_START_MONTH=9
+-DCONFIG_START_YEAR=2014
+-DCONFIG_STM32_DMA2=1
+-DCONFIG_STM32_DMACAPABLE=1
+-DCONFIG_STM32_ETHMAC=1
+-DCONFIG_STM32_JTAG_SW_ENABLE=1
+-DCONFIG_STM32_PHYADDR=0
+-DCONFIG_STM32_PHYSR_100FD=0x0018
+-DCONFIG_STM32_PHYSR_100HD=0x0008
+-DCONFIG_STM32_PHYSR_10FD=0x0014
+-DCONFIG_STM32_PHYSR_10HD=0x0004
+-DCONFIG_STM32_PHYSR_ALTCONFIG=1
+-DCONFIG_STM32_PHYSR_ALTMODE=0x001c
+-DCONFIG_STM32_PHYSR=31
+-DCONFIG_STM32_PWR=1
+-DCONFIG_STM32_RMII_EXTCLK=1
+-DCONFIG_STM32_SDIO=1
+-DCONFIG_STM32_SPI1=1
+-DCONFIG_STM32_USART6=1
+-DCONFIG_STM32F4DISBB=1
+-DCONFIG_USART6_RXBUFSIZE=64
+-DCONFIG_USART6_SERIAL_CONSOLE=1
+-DCONFIG_USART6_TXBUFSIZE=64
+-DCONFIG_USER_ENTRYPOINT="nsh_main"
+
+-DCONFIG_ARCH_CHIP_STM32F407VE
+-DCONFIG_ARCH_CORTEXM4
+-DCONFIG_STM32_STM32F4XXX
+
+-DCONFIG_NSOCKET_DESCRIPTORS=1
+-DCONFIG_MM_REGIONS=2
+
+
+Home » Blogs » Bart's blog
+HOWTO: Installing NuttX on the STM32F4 Discovery board (using Debian Linux)
+Submitted by Bart on Sun, 2014-01-26 23:21
+
+Last night I installed the NuttX RTOS on a new STM32F4 Discovery board I bought at Mauser a couple of days ago for $15. Of course, I was working from Debian Linux. This would not have been possible without extensive help from the Interwebs. I used too many different references to list most of them here. Instead, I'm just going to tell you how I would do it if I had it to do over. Got to give something back, y'know. Here goes…
+Hardware Needed
+
+    The board, of course.
+    A computer running Debian Linux with two available USB ports (a hub should work fine).
+    One USB mini cable (should have come with the board) and one USB micro cable.
+
+Software Needed
+    The latest NuttX tarball and NuttX apps tarball from their website. I used version 6.32. Unpack the tarballs according to the instructions in the top-level NuttX README.
+    A "toolchain" for compiling, loading and debugging code. I used Keith Packard's Debian package for stlink, but he has upstreamed the other packages to Debian.
+        Add a file called 96-keithp.list to /etc/apt/sources.list.d with contents:
+          deb http://keithp.com/archive unstable/
+    I then ran apt-get update to refresh the cache. "I may have also added Keith's GPG key somehow so that it didn't whine? You'll likely also need to make sure you have a Debian unstable feed enabled.
+    I used apt-get -t unstable install to install needed packages.
+        binutils-arm-none-eabi
+        gcc-arm-none-eabi
+        gdb-arm-none-eabi
+        stlink
+
+    The STM firmware bundle for the F4 Discovery. The one I have is called stsw-stm32068.zip. There's a newer firmware bundle available, but I haven't yet tried it.
+    The minicom terminal program, installable via apt-get.
+
+Getting Ready To Go
+    Start by powering up the Discovery using the mini-USB cable. You should get lots of pretty colored lights.
+        If the Discovery has been messed with previously, the default demo firmware may have been overwritten. See "Recovering the Demo Firmware" below for how to get the default demo firmware load back onto the board.
+
+    Tap the blue button and the lights will disappear. Tilt or move the board to see the lights light up in the direction the onboard Inertial Measurement Unit (IMU) thinks the board is going right now.
+    Have big fun with connecting the micro-USB port and noticing that the board IMU now acts like a (terrible) mouse.
+
+Discovery Board Architecture
+
+This is probably a good point to explain a little bit about the Discovery board architecture. The board consists of two loosely-coupled sections.
+One section of the Discovery board has the STM32F407VG microcontroller, the audio subsystem, the buttons, and the micro-USB OTG port. (USB "On-The-Go" is a standard by which a USB port can serve as either a gadget port or a host port, and can auto-negotiate endpoints when plugged into another OTG port.) There is a JTAG-ish port here, labeled SWD (for "Single-Wire Debug").
+
+The other Discovery board section has the mini-USB gadget port, which provides power to the board and also serves as a connection to the ST-Link processor on the board. ST-Link is an ST semi-proprietary protocol by which a USB host can manipulate the operation of the STM32 microcontroller. As near as I can work out, ST-Link works by forcing a bootstrap program into RAM and then executing that program. Thus, ST-Link will only work when the STM32 is in an awake state and capable of being programmed.
+ST-Link
+
+The software we will use to talk to the ST-Link on the Discovery board is texane stlink. texane stlink is an open source Linux version of ST's proprietary ST-Link software for Windows.
+
+From the point of view of a host talking to the Discovery board via ST-Link, the 1MB of flash memory lives at addresses 0-0x100000 if you want to read it, and 0x8000000-0x8100000 if you want to write it. The distinction is important: trying to write to the lower address range will silently fail.
+
+Install texane stlink with apt-get -t unstable install stlink and then try
+        sudo udevadm control --reload-rules
+
+just to make sure that the device will be recognized. If the mini-USB port is plugged in, unplug and replug it.
+Backing Up the Firmware
+
+While it is true that the ZIP from ST contains the demo firmware, I'm never comfortable with that; who knows whether it will be OK? To back up the firmware sitting on your Discovery board, you can follow the steps below. Of course, if you have no idea what firmware is on your Discovery board, there's little point in this exercise.
+
+    If you haven't already, install the stlink package as described above.
+
+    Plug the mini-USB port in. The board should power up and start its little demo dance. You will likely not unplug the mini-USB for the rest of this HOWTO.
+
+    Say
+
+        st-flash read /tmp/stm32f4discovery-demo.bin 0x100000
+
+    Obviously, you can use whatever path and filename you want. Put the resulting file somewhere safe, in case you want to revert your board to how it was when you got it.
+
+Configuring NuttX
+
+If you haven't yet, now is a good time to grab NuttX tarballs (or from the repo, I guess—haven't yet tried). There are two tarballs you need, a nuttx tarball and an apps tarball with the same version number. They must be unpacked into the same parent directory, as the former refers to the latter. Make a symlink from the versioned apps directory to just apps.
+
+Next, you need to make sure the gcc-arm-none-eabi and binutils-arm-none-eabi cross-packages are installed as described above. The configuration process wants to know that they are there.
+
+Now you are going to configure NuttX for the platform. Most of the work has already been done for us. Go into the nuttx directory, then one level down into tools. Say
+
+        sh ./configure.sh stm32f4discovery/usbnsh
+
+and then go back up a level.
+
+Custom NuttX configuration is intended to be done using the kconfig-frontend tools as liberated from the Linux kernel. Go download the latest kconfig-frontend tarball, unpack it, and build and install it using the usual methods. Make sure that you have libncurses5-dev installed before you try to configure kconfig-frontend or it will fail to build the kconfig-mconf you will need.
+
+Now, type make menuconfig at the nuttx root and you should be presented with a fairly familiar-looking configurator.
+
+You have several choices at this point.
+
+    You could carefully read all the configuration documentation, and meditate over what you might turn on to get desired functionality.
+
+    You could read the README files in the various config/stm32f4discovery directories, which describe a lot of what to do.
+
+    You could move aside the .config file that is sitting at the top of the nuttx tree and instead use mine. Note that this will only work for NuttX 7.8, but it is probably the quickest route. You can run make oldconfig to bring this file up to date for your newer NuttX version.
+
+Having done all this, you should be ready to go.
+Building and Installing NuttX
+
+Building NuttX is easy. Just say make and wait. NuttX builds quite quickly.
+
+When the build is complete, you should have files named nuttx and nuttx.bin sitting in the root directory. You now have two choices. You can install directly using st-flash or by using gdb as a loader. The gdb method is slightly less error-prone, but the st-flash method is easier if you're careful.
+
+    To install using st-flash... If you haven't already, install texane stlink as described above. Then
+
+        st-flash write nuttx.bin 0x8000000
+
+    You should see a long sequence of interactions, after which all the lights on the board should be red. This probably means that you have successfully installed NuttX.
+
+    To install using gdb... If you haven't already, apt-get -t unstable install gdb-arm-none-eabi and also install texane stlink as described above.
+
+    Next, open a new terminal on your Linux box and run st-util -v. You should see a set of reports that ends with "Listening at *:4242". This last is an indication of how you can connect with gdb.
+
+    Finally, in a separate terminal from st-util, run arm-none-eabi-gdb nuttx (note the weird flip from the package name) and at the gdb prompt say:
+
+        target extended-remote :4242
+        monitor halt
+        monitor reset
+        load
+
+    You should see a long sequence of interactions after the load, culminating in "Jolly good!" Now exit gdb, which should cause st-util to die.
+
+Now unplug the mini-USB, plug a cable from the host to the micro-USB if you haven't already, and then plug the mini-USB back in.
+
+If all is well, you should see /dev/ttyACM0 on your host, and some dmesg -T output that indicates that this USB is OK.
+Talking To NSH
+
+The NuttShell NSH is a simplistic application designed mainly for light debugging and to show what the OS can do. At this point, you should be ready to talk to NSH.
+
+If you have not already, apt-get install minicom. Once it is up, you should be able to use minicom -s as root. Edit the "Serial port setup" to point minicom at /dev/ttyACM0. No other changes should be needed. Then "Save setup as dfl" and "Exit".
+
+Now hit return three times. You should see the NSH prompt. Play around with NSH; when you are done, you can use '^AQ' to quit minicom. Always say "OK" to "Leave without reset?"
+
+Congratulations on installing NuttX!
+Recovering The Demo Firmware
+
+At some point it may seem that the Discovery board is "bricked" because the texane stlink tools can no longer talk to it. Unless you have managed to damage the hardware physically by shorting things or something, you are almost certainly still OK. Here's how to get back to where we started:
+
+    If you have a file stm32f4discovery-demo.bin containing a backup of the firmware as described earlier: Go to the directory where that file is. Now flash the firmware file with:
+
+        st-flash write stm32f4discovery-firmware.bin 0x8000000
+
+    If you do not have a backup: unpack stsw-stm32068.zip. Change to the directory STM32F4-Discovery_FW_V1.1.0/Project/FW_upgrade/Binary/. Now flash the firmware file with:
+
+        st-flash write STM32F4-Discovery_Demo_0x08008000.bin 0x08008000
+
+If either of the above steps fails, the probable cause is that the STM32F4 side of the Discovery board is in a state that makes it unable to accept the boot program from the ST-Link side of the board. To fix this, you can put the Discovery board in Direct Firmware Upload (DFU) mode.
+
+    Power down the Discovery board by unplugging the mini-USB.
+
+    Get one of the little jumper "feet" off the bottom of the Discovery board.
+
+    Use this jumper to connect the BOOT0 and VDD pins in the double row of pins on the right side of the board when the lettering on the board is upside-up. Be careful to connect exactly these two pins, or you could damage the Discovery board on powerup.
+
+    Plug the mini-USB back in to power the Discovery board.
+
+    Push the black RESET button on the board.
+
+You should now be in a state where texane stlink can talk to the Discovery board without problem. Proceed with uploading firmware as above.
+Conclusions
+
+The STM32F4 Discovery board is an incredible value at $15. NuttX seems to be a fairly nice BSD-licensed RTOS with great support for this board. Getting this all running is a great preliminary to the software stage of Summer Hardware Project, about which more soon. Fob
+
+
+
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/mm'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/libxx'
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/libxx'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/fs'
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/fs'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/binfmt'
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/binfmt'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/lib'
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/lib'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/syscall'
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/syscall'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/graphics'
+make[2]: Entering directory '/home/sqj/workspace/Embos/nuttx/graphics/nxglib'
+make[2]: Leaving directory '/home/sqj/workspace/Embos/nuttx/graphics/nxglib'
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/graphics'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/libnx'
+make[2]: Entering directory '/home/sqj/workspace/Embos/nuttx/libnx/bin'
+make[2]: Leaving directory '/home/sqj/workspace/Embos/nuttx/libnx/bin'
+make[2]: Entering directory '/home/sqj/workspace/Embos/nuttx/libnx/ubin'
+make[2]: Leaving directory '/home/sqj/workspace/Embos/nuttx/libnx/ubin'
+make[2]: Entering directory '/home/sqj/workspace/Embos/nuttx/libnx/kbin'
+make[2]: Leaving directory '/home/sqj/workspace/Embos/nuttx/libnx/kbin'
+make[2]: Entering directory '/home/sqj/workspace/Embos/nuttx/libnx/nxfonts'
+make[2]: Leaving directory '/home/sqj/workspace/Embos/nuttx/libnx/nxfonts'
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/libnx'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/audio'
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/audio'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/wireless'
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/wireless'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/net'
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/net'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/crypto'
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/crypto'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/tools'
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/tools'
+sqj@ubuntu:~/workspace/Embos/nuttx$ ls
+arch                    configs         FlatLibs.mk    lib            Makefile          README.txt    wireless
+audio                   COPYING         fs             libc           Makefile.unix     ReleaseNotes
+binfmt                  crypto          graphics       libnx          Makefile.win      sched
+build_stm32f1_eval      Directories.mk  include        LibTargets.mk  mm                syscall
+build_stm32f4discovery  Documentation   Kconfig        libxx          net               TODO
+ChangeLog               drivers         KernelLibs.mk  Make.defs      ProtectedLibs.mk  tools
+sqj@ubuntu:~/workspace/Embos/nuttx$ make
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/tools'
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/tools'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/tools'
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/tools'
+LN: include/arch/board to /home/sqj/workspace/Embos/nuttx/configs/stm32f4discovery/include
+LN: include/arch/chip to arch/arm/include/stm32
+LN: arch/arm/src/chip to arch/arm/src/stm32
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/configs'
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/configs'
+make[1]: Entering directory '/home/sqj/workspace/Embos/apps'
+make[2]: Entering directory '/home/sqj/workspace/Embos/apps/platform'
+LN: platform/board to /home/sqj/workspace/Embos/apps/platform/dummy
+make[2]: Leaving directory '/home/sqj/workspace/Embos/apps/platform'
+make[1]: Leaving directory '/home/sqj/workspace/Embos/apps'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/configs'
+make[2]: Entering directory '/home/sqj/workspace/Embos/nuttx/configs/stm32f4discovery/src'
+make[2]: Nothing to be done for 'context'.
+make[2]: Leaving directory '/home/sqj/workspace/Embos/nuttx/configs/stm32f4discovery/src'
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/configs'
+make[1]: Entering directory '/home/sqj/workspace/Embos/apps'
+make[2]: Entering directory '/home/sqj/workspace/Embos/apps/builtin'
+make[3]: Entering directory '/home/sqj/workspace/Embos/apps/builtin/registry'
+make[3]: Nothing to be done for 'context'.
+make[3]: Leaving directory '/home/sqj/workspace/Embos/apps/builtin/registry'
+make[2]: Leaving directory '/home/sqj/workspace/Embos/apps/builtin'
+make[2]: Entering directory '/home/sqj/workspace/Embos/apps'
+make[3]: Entering directory '/home/sqj/workspace/Embos/apps/examples/nsh'
+make[3]: Nothing to be done for 'context'.
+make[3]: Leaving directory '/home/sqj/workspace/Embos/apps/examples/nsh'
+make[3]: Entering directory '/home/sqj/workspace/Embos/apps/nshlib'
+make[3]: Nothing to be done for 'context'.
+make[3]: Leaving directory '/home/sqj/workspace/Embos/apps/nshlib'
+make[3]: Entering directory '/home/sqj/workspace/Embos/apps/builtin'
+make[4]: Entering directory '/home/sqj/workspace/Embos/apps/builtin/registry'
+make[4]: Nothing to be done for 'context'.
+make[4]: Leaving directory '/home/sqj/workspace/Embos/apps/builtin/registry'
+make[3]: Leaving directory '/home/sqj/workspace/Embos/apps/builtin'
+make[3]: Entering directory '/home/sqj/workspace/Embos/apps/system/readline'
+make[3]: Nothing to be done for 'context'.
+make[3]: Leaving directory '/home/sqj/workspace/Embos/apps/system/readline'
+make[3]: Entering directory '/home/sqj/workspace/Embos/apps/platform'
+LN: platform/board to /home/sqj/workspace/Embos/apps/platform/dummy
+make[3]: Leaving directory '/home/sqj/workspace/Embos/apps/platform'
+make[2]: Leaving directory '/home/sqj/workspace/Embos/apps'
+make[1]: Leaving directory '/home/sqj/workspace/Embos/apps'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/tools'
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/tools'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/tools'
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/tools'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/sched'
+make[1]: Nothing to be done for 'depend'.
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/sched'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/drivers'
+make[1]: Nothing to be done for 'depend'.
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/drivers'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/configs'
+make[1]: Nothing to be done for 'depend'.
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/configs'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/arch/arm/src'
+make[1]: Nothing to be done for 'depend'.
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/arch/arm/src'
+make[1]: Entering directory '/home/sqj/workspace/Embos/apps'
+make[2]: Entering directory '/home/sqj/workspace/Embos/apps/builtin'
+make[3]: Entering directory '/home/sqj/workspace/Embos/apps/builtin/registry'
+make[3]: Nothing to be done for 'context'.
+make[3]: Leaving directory '/home/sqj/workspace/Embos/apps/builtin/registry'
+make[2]: Leaving directory '/home/sqj/workspace/Embos/apps/builtin'
+make[2]: Entering directory '/home/sqj/workspace/Embos/apps'
+make[3]: Entering directory '/home/sqj/workspace/Embos/apps/examples/nsh'
+make[3]: Nothing to be done for 'context'.
+make[3]: Leaving directory '/home/sqj/workspace/Embos/apps/examples/nsh'
+make[3]: Entering directory '/home/sqj/workspace/Embos/apps/nshlib'
+make[3]: Nothing to be done for 'context'.
+make[3]: Leaving directory '/home/sqj/workspace/Embos/apps/nshlib'
+make[3]: Entering directory '/home/sqj/workspace/Embos/apps/builtin'
+make[4]: Entering directory '/home/sqj/workspace/Embos/apps/builtin/registry'
+make[4]: Nothing to be done for 'context'.
+make[4]: Leaving directory '/home/sqj/workspace/Embos/apps/builtin/registry'
+make[3]: Leaving directory '/home/sqj/workspace/Embos/apps/builtin'
+make[3]: Entering directory '/home/sqj/workspace/Embos/apps/system/readline'
+make[3]: Nothing to be done for 'context'.
+make[3]: Leaving directory '/home/sqj/workspace/Embos/apps/system/readline'
+make[3]: Entering directory '/home/sqj/workspace/Embos/apps/platform'
+LN: platform/board to /home/sqj/workspace/Embos/apps/platform/dummy
+make[3]: Leaving directory '/home/sqj/workspace/Embos/apps/platform'
+make[2]: Leaving directory '/home/sqj/workspace/Embos/apps'
+make[2]: Entering directory '/home/sqj/workspace/Embos/apps/examples/nsh'
+make[2]: Nothing to be done for 'depend'.
+make[2]: Leaving directory '/home/sqj/workspace/Embos/apps/examples/nsh'
+make[2]: Entering directory '/home/sqj/workspace/Embos/apps/nshlib'
+make[2]: Leaving directory '/home/sqj/workspace/Embos/apps/nshlib'
+make[2]: Entering directory '/home/sqj/workspace/Embos/apps/builtin'
+make[2]: Nothing to be done for 'depend'.
+make[2]: Leaving directory '/home/sqj/workspace/Embos/apps/builtin'
+make[2]: Entering directory '/home/sqj/workspace/Embos/apps/system/readline'
+make[2]: Nothing to be done for 'depend'.
+make[2]: Leaving directory '/home/sqj/workspace/Embos/apps/system/readline'
+make[2]: Entering directory '/home/sqj/workspace/Embos/apps/platform'
+LN: platform/board to /home/sqj/workspace/Embos/apps/platform/dummy
+make[2]: Leaving directory '/home/sqj/workspace/Embos/apps/platform'
+make[1]: Leaving directory '/home/sqj/workspace/Embos/apps'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/libc'
+make[1]: Nothing to be done for 'depend'.
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/libc'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/mm'
+make[1]: Nothing to be done for 'depend'.
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/mm'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/libxx'
+make[1]: Nothing to be done for 'depend'.
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/libxx'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/fs'
+make[1]: Nothing to be done for 'depend'.
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/fs'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/binfmt'
+make[1]: Nothing to be done for 'depend'.
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/binfmt'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/sched'
+CC:  clock/clock_initialize.c
+CC:  clock/clock_settime.c
+CC:  clock/clock_gettime.c
+CC:  clock/clock_getres.c
+CC:  clock/clock_time2ticks.c
+CC:  clock/clock_abstime2ticks.c
+CC:  clock/clock_ticks2time.c
+CC:  clock/clock_systimer.c
+CC:  clock/clock_systimespec.c
+CC:  clock/clock_timespec_add.c
+CC:  clock/clock_timespec_subtract.c
+CC:  errno/errno_getptr.c
+CC:  environ/env_getenvironptr.c
+CC:  environ/env_dup.c
+CC:  environ/env_release.c
+CC:  environ/env_findvar.c
+CC:  environ/env_removevar.c
+CC:  environ/env_clearenv.c
+CC:  environ/env_getenv.c
+CC:  environ/env_putenv.c
+CC:  environ/env_setenv.c
+CC:  environ/env_unsetenv.c
+CC:  group/group_create.c
+CC:  group/group_join.c
+CC:  group/group_leave.c
+CC:  group/group_find.c
+CC:  group/group_setupstreams.c
+CC:  group/group_setupidlefiles.c
+CC:  group/group_setuptaskfiles.c
+CC:  group/group_foreachchild.c
+CC:  group/group_killchildren.c
+CC:  group/group_waiter.c
+CC:  group/group_signal.c
+CC:  init/os_start.c
+CC:  init/os_bringup.c
+CC:  irq/irq_initialize.c
+CC:  irq/irq_attach.c
+CC:  irq/irq_dispatch.c
+CC:  irq/irq_unexpectedisr.c
+CC:  mqueue/mq_send.c
+CC:  mqueue/mq_timedsend.c
+CC:  mqueue/mq_sndinternal.c
+CC:  mqueue/mq_receive.c
+CC:  mqueue/mq_timedreceive.c
+CC:  mqueue/mq_rcvinternal.c
+CC:  mqueue/mq_initialize.c
+CC:  mqueue/mq_descreate.c
+CC:  mqueue/mq_desclose.c
+CC:  mqueue/mq_msgfree.c
+CC:  mqueue/mq_msgqalloc.c
+CC:  mqueue/mq_msgqfree.c
+CC:  mqueue/mq_release.c
+CC:  mqueue/mq_recover.c
+CC:  mqueue/mq_setattr.c
+CC:  mqueue/mq_getattr.c
+CC:  mqueue/mq_waitirq.c
+CC:  mqueue/mq_notify.c
+CC:  paging/pg_miss.c
+CC:  paging/pg_worker.c
+CC:  pthread/pthread_keycreate.c
+CC:  pthread/pthread_setspecific.c
+CC:  pthread/pthread_getspecific.c
+CC:  pthread/pthread_keydelete.c
+CC:  pthread/pthread_create.c
+CC:  pthread/pthread_exit.c
+CC:  pthread/pthread_join.c
+CC:  pthread/pthread_detach.c
+CC:  pthread/pthread_getschedparam.c
+CC:  pthread/pthread_setschedparam.c
+CC:  pthread/pthread_mutexinit.c
+CC:  pthread/pthread_mutexdestroy.c
+CC:  pthread/pthread_mutexlock.c
+CC:  pthread/pthread_mutextrylock.c
+CC:  pthread/pthread_mutexunlock.c
+CC:  pthread/pthread_condwait.c
+CC:  pthread/pthread_condsignal.c
+CC:  pthread/pthread_condbroadcast.c
+CC:  pthread/pthread_cancel.c
+CC:  pthread/pthread_initialize.c
+CC:  pthread/pthread_completejoin.c
+CC:  pthread/pthread_findjoininfo.c
+CC:  pthread/pthread_release.c
+CC:  pthread/pthread_setschedprio.c
+CC:  pthread/pthread_mutex.c
+CC:  pthread/pthread_mutexconsistent.c
+CC:  pthread/pthread_mutexinconsistent.c
+CC:  pthread/pthread_condtimedwait.c
+CC:  pthread/pthread_kill.c
+CC:  pthread/pthread_sigmask.c
+CC:  sched/sched_garbage.c
+CC:  sched/sched_getfiles.c
+CC:  sched/sched_addreadytorun.c
+CC:  sched/sched_removereadytorun.c
+CC:  sched/sched_addprioritized.c
+CC:  sched/sched_mergeprioritized.c
+CC:  sched/sched_mergepending.c
+CC:  sched/sched_addblocked.c
+CC:  sched/sched_removeblocked.c
+CC:  sched/sched_free.c
+CC:  sched/sched_gettcb.c
+CC:  sched/sched_verifytcb.c
+CC:  sched/sched_releasetcb.c
+CC:  sched/sched_getsockets.c
+CC:  sched/sched_getstreams.c
+CC:  sched/sched_setparam.c
+CC:  sched/sched_setpriority.c
+CC:  sched/sched_getparam.c
+CC:  sched/sched_setscheduler.c
+CC:  sched/sched_getscheduler.c
+CC:  sched/sched_yield.c
+CC:  sched/sched_rrgetinterval.c
+CC:  sched/sched_foreach.c
+CC:  sched/sched_lock.c
+CC:  sched/sched_unlock.c
+CC:  sched/sched_lockcount.c
+CC:  sched/sched_idletask.c
+CC:  sched/sched_self.c
+CC:  sched/sched_waitpid.c
+CC:  sched/sched_roundrobin.c
+CC:  sched/sched_resumescheduler.c
+CC:  sched/sched_processtimer.c
+CC:  semaphore/sem_destroy.c
+CC:  semaphore/sem_wait.c
+CC:  semaphore/sem_trywait.c
+CC:  semaphore/sem_tickwait.c
+CC:  semaphore/sem_timedwait.c
+CC:  semaphore/sem_timeout.c
+CC:  semaphore/sem_post.c
+CC:  semaphore/sem_recover.c
+CC:  semaphore/sem_reset.c
+CC:  semaphore/sem_waitirq.c
+CC:  signal/sig_initialize.c
+CC:  signal/sig_action.c
+CC:  signal/sig_procmask.c
+CC:  signal/sig_pending.c
+CC:  signal/sig_suspend.c
+CC:  signal/sig_kill.c
+CC:  signal/sig_queue.c
+CC:  signal/sig_waitinfo.c
+CC:  signal/sig_timedwait.c
+CC:  signal/sig_findaction.c
+CC:  signal/sig_allocpendingsigaction.c
+CC:  signal/sig_releasependingsigaction.c
+CC:  signal/sig_unmaskpendingsignal.c
+CC:  signal/sig_removependingsignal.c
+CC:  signal/sig_releasependingsignal.c
+CC:  signal/sig_lowest.c
+CC:  signal/sig_mqnotempty.c
+CC:  signal/sig_cleanup.c
+CC:  signal/sig_dispatch.c
+CC:  signal/sig_deliver.c
+CC:  signal/sig_pause.c
+CC:  signal/sig_nanosleep.c
+CC:  signal/sig_usleep.c
+CC:  signal/sig_sleep.c
+CC:  task/task_create.c
+CC:  task/task_init.c
+CC:  task/task_setup.c
+CC:  task/task_activate.c
+CC:  task/task_start.c
+CC:  task/task_delete.c
+CC:  task/task_exit.c
+CC:  task/task_exithook.c
+CC:  task/task_getgroup.c
+CC:  task/task_getpid.c
+CC:  task/task_prctl.c
+CC:  task/task_recover.c
+CC:  task/task_restart.c
+CC:  task/task_spawnparms.c
+CC:  task/task_setcancelstate.c
+CC:  task/task_terminate.c
+CC:  task/exit.c
+CC:  task/task_vfork.c
+CC:  task/task_spawn.c
+CC:  timer/timer_initialize.c
+CC:  timer/timer_create.c
+CC:  timer/timer_delete.c
+CC:  timer/timer_getoverrun.c
+CC:  timer/timer_gettime.c
+CC:  timer/timer_settime.c
+CC:  timer/timer_release.c
+CC:  wdog/wd_initialize.c
+CC:  wdog/wd_create.c
+CC:  wdog/wd_start.c
+CC:  wdog/wd_cancel.c
+CC:  wdog/wd_delete.c
+CC:  wdog/wd_gettime.c
+CC:  wdog/wd_recover.c
+AR:   clock_initialize.o clock_settime.o clock_gettime.o clock_getres.o clock_time2ticks.o clock_abstime2ticks.o clock_ticks2time.o clock_systimer.o clock_systimespec.o clock_timespec_add.o clock_timespec_subtract.o errno_getptr.o env_getenvironptr.o env_dup.o env_release.o env_findvar.o env_removevar.o env_clearenv.o env_getenv.o env_putenv.o env_setenv.o env_unsetenv.o group_create.o group_join.o group_leave.o group_find.o group_setupstreams.o group_setupidlefiles.o group_setuptaskfiles.o group_foreachchild.o group_killchildren.o group_waiter.o group_signal.o os_start.o os_bringup.o irq_initialize.o irq_attach.o irq_dispatch.o irq_unexpectedisr.o mq_send.o mq_timedsend.o mq_sndinternal.o mq_receive.o mq_timedreceive.o mq_rcvinternal.o mq_initialize.o mq_descreate.o mq_desclose.o mq_msgfree.o mq_msgqalloc.o mq_msgqfree.o mq_release.o mq_recover.o mq_setattr.o mq_getattr.o mq_waitirq.o mq_notify.o pg_miss.o pg_worker.o pthread_keycreate.o pthread_setspecific.o pthread_getspecific.o pthread_keydelete.o pthread_create.o pthread_exit.o pthread_join.o pthread_detach.o pthread_getschedparam.o pthread_setschedparam.o pthread_mutexinit.o pthread_mutexdestroy.o pthread_mutexlock.o pthread_mutextrylock.o pthread_mutexunlock.o pthread_condwait.o pthread_condsignal.o pthread_condbroadcast.o pthread_cancel.o pthread_initialize.o pthread_completejoin.o pthread_findjoininfo.o pthread_release.o pthread_setschedprio.o pthread_mutex.o pthread_mutexconsistent.o pthread_mutexinconsistent.o pthread_condtimedwait.o pthread_kill.o pthread_sigmask.o sched_garbage.o sched_getfiles.o sched_addreadytorun.o sched_removereadytorun.o sched_addprioritized.o sched_mergeprioritized.o sched_mergepending.o sched_addblocked.o sched_removeblocked.o sched_free.o sched_gettcb.o sched_verifytcb.o sched_releasetcb.o sched_getsockets.o sched_getstreams.o sched_setparam.o sched_setpriority.o sched_getparam.o sched_setscheduler.o sched_getscheduler.o sched_yield.o sched_rrgetinterval.o sched_foreach.o sched_lock.o sched_unlock.o sched_lockcount.o sched_idletask.o sched_self.o sched_waitpid.o sched_roundrobin.o sched_resumescheduler.o sched_processtimer.o sem_destroy.o sem_wait.o sem_trywait.o sem_tickwait.o sem_timedwait.o sem_timeout.o sem_post.o sem_recover.o sem_reset.o sem_waitirq.o sig_initialize.o sig_action.o sig_procmask.o sig_pending.o sig_suspend.o sig_kill.o sig_queue.o sig_waitinfo.o sig_timedwait.o sig_findaction.o sig_allocpendingsigaction.o sig_releasependingsigaction.o sig_unmaskpendingsignal.o sig_removependingsignal.o sig_releasependingsignal.o sig_lowest.o sig_mqnotempty.o sig_cleanup.o sig_dispatch.o sig_deliver.o sig_pause.o sig_nanosleep.o sig_usleep.o sig_sleep.o task_create.o task_init.o task_setup.o task_activate.o task_start.o task_delete.o task_exit.o task_exithook.o task_getgroup.o task_getpid.o task_prctl.o task_recover.o task_restart.o task_spawnparms.o task_setcancelstate.o task_terminate.o exit.o task_vfork.o task_spawn.o timer_initialize.o timer_create.o timer_delete.o timer_getoverrun.o timer_gettime.o timer_settime.o timer_release.o wd_initialize.o wd_create.o wd_start.o wd_cancel.o wd_delete.o wd_gettime.o wd_recover.o
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/sched'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/drivers'
+CC:  bch/bchlib_setup.c
+CC:  bch/bchlib_teardown.c
+CC:  bch/bchlib_read.c
+CC:  bch/bchlib_write.c
+CC:  bch/bchlib_cache.c
+CC:  bch/bchlib_sem.c
+CC:  bch/bchdev_register.c
+CC:  bch/bchdev_unregister.c
+CC:  bch/bchdev_driver.c
+CC:  loop/losetup.c
+CC:  pipes/pipe.c
+CC:  pipes/fifo.c
+CC:  pipes/pipe_common.c
+CC:  serial/serial.c
+CC:  serial/serial_io.c
+CC:  serial/lowconsole.c
+CC:  spi/spi_transfer.c
+CC:  syslog/vsyslog.c
+CC:  syslog/syslog_stream.c
+CC:  syslog/syslog_emergstream.c
+CC:  syslog/syslog_channel.c
+CC:  syslog/syslog_putc.c
+CC:  syslog/syslog_write.c
+CC:  syslog/syslog_force.c
+CC:  syslog/syslog_flush.c
+CC:  syslog/syslog_initialize.c
+CC:  syslog/syslog_device.c
+CC:  syslog/syslog_consolechannel.c
+CC:  usbhost/hid_parser.c
+CC:  dev_null.c
+CC:  dev_zero.c
+CC:  ramdisk.c
+AR:   bchlib_setup.o bchlib_teardown.o bchlib_read.o bchlib_write.o bchlib_cache.o bchlib_sem.o bchdev_register.o bchdev_unregister.o bchdev_driver.o losetup.o pipe.o fifo.o pipe_common.o serial.o serial_io.o lowconsole.o spi_transfer.o vsyslog.o syslog_stream.o syslog_emergstream.o syslog_channel.o syslog_putc.o syslog_write.o syslog_force.o syslog_flush.o syslog_initialize.o syslog_device.o syslog_consolechannel.o hid_parser.o dev_null.o dev_zero.o ramdisk.o
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/drivers'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/configs'
+AR:    
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/configs'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/libc'
+CC:  dirent/lib_readdirr.c
+CC:  dirent/lib_telldir.c
+CC:  fixedmath/lib_fixedmath.c
+CC:  fixedmath/lib_b16sin.c
+CC:  fixedmath/lib_b16cos.c
+CC:  fixedmath/lib_b16atan2.c
+CC:  fixedmath/lib_ubsqrt.c
+CC:  inttypes/lib_imaxabs.c
+CC:  inttypes/lib_strtoimax.c
+CC:  inttypes/lib_strtoumax.c
+CC:  libgen/lib_basename.c
+CC:  libgen/lib_dirname.c
+CC:  misc/lib_stream.c
+CC:  misc/lib_utsname.c
+CC:  misc/lib_xorshift128.c
+CC:  misc/lib_tea_encrypt.c
+CC:  misc/lib_tea_decrypt.c
+CC:  misc/lib_filesem.c
+CC:  misc/lib_umul32.c
+CC:  misc/lib_umul64.c
+CC:  misc/lib_umul32x64.c
+CC:  misc/lib_uadd32x64.c
+CC:  misc/lib_uadd64.c
+CC:  misc/lib_usub64x32.c
+CC:  misc/lib_usub64.c
+CC:  misc/lib_sendfile.c
+CC:  misc/lib_streamsem.c
+CC:  misc/lib_crc64.c
+CC:  misc/lib_crc32.c
+CC:  misc/lib_crc16.c
+CC:  misc/lib_crc8.c
+CC:  misc/lib_dumpbuffer.c
+CC:  misc/lib_match.c
+CC:  net/lib_addrconfig.c
+CC:  net/lib_etherntoa.c
+CC:  net/lib_htons.c
+CC:  net/lib_htonl.c
+CC:  net/lib_inetaddr.c
+CC:  net/lib_inetntoa.c
+CC:  net/lib_inetntop.c
+CC:  net/lib_inetpton.c
+CC:  pthread/pthread_attr_init.c
+CC:  pthread/pthread_attr_destroy.c
+CC:  pthread/pthread_attr_setschedpolicy.c
+CC:  pthread/pthread_attr_getschedpolicy.c
+CC:  pthread/pthread_attr_setinheritsched.c
+CC:  pthread/pthread_attr_getinheritsched.c
+CC:  pthread/pthread_attr_setstacksize.c
+CC:  pthread/pthread_attr_getstacksize.c
+CC:  pthread/pthread_attr_setschedparam.c
+CC:  pthread/pthread_attr_getschedparam.c
+CC:  pthread/pthread_barrierattr_init.c
+CC:  pthread/pthread_barrierattr_destroy.c
+CC:  pthread/pthread_barrierattr_getpshared.c
+CC:  pthread/pthread_barrierattr_setpshared.c
+CC:  pthread/pthread_barrierinit.c
+CC:  pthread/pthread_barrierdestroy.c
+CC:  pthread/pthread_barrierwait.c
+CC:  pthread/pthread_condattr_init.c
+CC:  pthread/pthread_condattr_destroy.c
+CC:  pthread/pthread_condinit.c
+CC:  pthread/pthread_conddestroy.c
+CC:  pthread/pthread_mutexattr_init.c
+CC:  pthread/pthread_mutexattr_destroy.c
+CC:  pthread/pthread_mutexattr_getpshared.c
+CC:  pthread/pthread_mutexattr_setpshared.c
+CC:  pthread/pthread_mutexattr_setprotocol.c
+CC:  pthread/pthread_mutexattr_getprotocol.c
+CC:  pthread/pthread_mutexattr_settype.c
+CC:  pthread/pthread_mutexattr_gettype.c
+CC:  pthread/pthread_mutexattr_setrobust.c
+CC:  pthread/pthread_mutexattr_getrobust.c
+CC:  pthread/pthread_setcancelstate.c
+CC:  pthread/pthread_setcanceltype.c
+CC:  pthread/pthread_testcancel.c
+CC:  pthread/pthread_rwlock.c
+CC:  pthread/pthread_rwlock_rdlock.c
+CC:  pthread/pthread_rwlock_wrlock.c
+CC:  pthread/pthread_once.c
+CC:  pthread/pthread_yield.c
+CC:  queue/sq_addlast.c
+CC:  queue/sq_addfirst.c
+CC:  queue/sq_addafter.c
+CC:  queue/sq_cat.c
+CC:  queue/sq_rem.c
+CC:  queue/sq_remlast.c
+CC:  queue/sq_remfirst.c
+CC:  queue/sq_remafter.c
+CC:  queue/sq_count.c
+CC:  queue/dq_addlast.c
+CC:  queue/dq_addfirst.c
+CC:  queue/dq_addafter.c
+CC:  queue/dq_addbefore.c
+CC:  queue/dq_cat.c
+CC:  queue/dq_rem.c
+CC:  queue/dq_remlast.c
+CC:  queue/dq_remfirst.c
+CC:  queue/dq_count.c
+CC:  sched/sched_getprioritymax.c
+CC:  sched/sched_getprioritymin.c
+CC:  sched/task_setcanceltype.c
+CC:  sched/task_testcancel.c
+CC:  semaphore/sem_init.c
+CC:  semaphore/sem_getprotocol.c
+CC:  semaphore/sem_getvalue.c
+CC:  semaphore/sem_setprotocol.c
+CC:  signal/sig_addset.c
+CC:  signal/sig_delset.c
+CC:  signal/sig_emptyset.c
+CC:  signal/sig_fillset.c
+CC:  signal/sig_hold.c
+CC:  signal/sig_ignore.c
+CC:  signal/sig_ismember.c
+CC:  signal/sig_pause.c
+CC:  signal/sig_raise.c
+CC:  signal/sig_relse.c
+CC:  signal/sig_set.c
+CC:  signal/signal.c
+CC:  signal/sigwait.c
+CC:  spawn/lib_psfa_addaction.c
+CC:  spawn/lib_psfa_addclose.c
+CC:  spawn/lib_psfa_adddup2.c
+CC:  spawn/lib_psfa_addopen.c
+CC:  spawn/lib_psfa_destroy.c
+CC:  spawn/lib_psfa_init.c
+CC:  spawn/lib_psa_getflags.c
+CC:  spawn/lib_psa_getschedparam.c
+CC:  spawn/lib_psa_getschedpolicy.c
+CC:  spawn/lib_psa_init.c
+CC:  spawn/lib_psa_setflags.c
+CC:  spawn/lib_psa_setschedparam.c
+CC:  spawn/lib_psa_setschedpolicy.c
+CC:  spawn/lib_psa_getsigmask.c
+CC:  spawn/lib_psa_setsigmask.c
+CC:  spawn/lib_psa_getstacksize.c
+CC:  spawn/lib_psa_setstacksize.c
+CC:  stdio/lib_fileno.c
+CC:  stdio/lib_printf.c
+CC:  stdio/lib_sprintf.c
+CC:  stdio/lib_asprintf.c
+CC:  stdio/lib_snprintf.c
+CC:  stdio/lib_libsprintf.c
+CC:  stdio/lib_vsprintf.c
+CC:  stdio/lib_vasprintf.c
+CC:  stdio/lib_vsnprintf.c
+CC:  stdio/lib_libvsprintf.c
+CC:  stdio/lib_dprintf.c
+CC:  stdio/lib_vdprintf.c
+CC:  stdio/lib_meminstream.c
+CC:  stdio/lib_memoutstream.c
+CC:  stdio/lib_memsistream.c
+CC:  stdio/lib_memsostream.c
+CC:  stdio/lib_lowoutstream.c
+CC:  stdio/lib_zeroinstream.c
+CC:  stdio/lib_nullinstream.c
+CC:  stdio/lib_nulloutstream.c
+CC:  stdio/lib_sscanf.c
+CC:  stdio/lib_libnoflush.c
+CC:  stdio/lib_libsnoflush.c
+CC:  stdio/lib_rawinstream.c
+CC:  stdio/lib_rawoutstream.c
+CC:  stdio/lib_rawsistream.c
+CC:  stdio/lib_rawsostream.c
+CC:  stdio/lib_remove.c
+CC:  stdio/lib_fopen.c
+CC:  stdio/lib_freopen.c
+CC:  stdio/lib_fclose.c
+CC:  stdio/lib_fread.c
+CC:  stdio/lib_libfread.c
+CC:  stdio/lib_fseek.c
+CC:  stdio/lib_ftell.c
+CC:  stdio/lib_fsetpos.c
+CC:  stdio/lib_fgetpos.c
+CC:  stdio/lib_fgetc.c
+CC:  stdio/lib_fgets.c
+CC:  stdio/lib_gets_s.c
+CC:  stdio/lib_gets.c
+CC:  stdio/lib_libfgets.c
+CC:  stdio/lib_fwrite.c
+CC:  stdio/lib_libfwrite.c
+CC:  stdio/lib_fflush.c
+CC:  stdio/lib_libflushall.c
+CC:  stdio/lib_libfflush.c
+CC:  stdio/lib_rdflush.c
+CC:  stdio/lib_wrflush.c
+CC:  stdio/lib_fputc.c
+CC:  stdio/lib_puts.c
+CC:  stdio/lib_fputs.c
+CC:  stdio/lib_ungetc.c
+CC:  stdio/lib_vprintf.c
+CC:  stdio/lib_fprintf.c
+CC:  stdio/lib_vfprintf.c
+CC:  stdio/lib_stdinstream.c
+CC:  stdio/lib_stdoutstream.c
+CC:  stdio/lib_stdsistream.c
+CC:  stdio/lib_stdsostream.c
+CC:  stdio/lib_perror.c
+CC:  stdio/lib_feof.c
+CC:  stdio/lib_ferror.c
+CC:  stdio/lib_clearerr.c
+CC:  stdio/lib_setbuf.c
+CC:  stdio/lib_setvbuf.c
+CC:  stdlib/lib_abs.c
+CC:  stdlib/lib_abort.c
+CC:  stdlib/lib_div.c
+CC:  stdlib/lib_ldiv.c
+CC:  stdlib/lib_lldiv.c
+CC:  stdlib/lib_itoa.c
+CC:  stdlib/lib_labs.c
+CC:  stdlib/lib_llabs.c
+CC:  stdlib/lib_bsearch.c
+CC:  stdlib/lib_rand.c
+CC:  stdlib/lib_qsort.c
+CC:  stdlib/lib_srand.c
+CC:  stdlib/lib_strtol.c
+CC:  stdlib/lib_strtoll.c
+CC:  stdlib/lib_strtoul.c
+CC:  stdlib/lib_strtoull.c
+CC:  stdlib/lib_strtod.c
+CC:  stdlib/lib_strtof.c
+CC:  stdlib/lib_strtold.c
+CC:  stdlib/lib_checkbase.c
+CC:  string/lib_ffs.c
+CC:  string/lib_ffsl.c
+CC:  string/lib_ffsll.c
+CC:  string/lib_fls.c
+CC:  string/lib_flsl.c
+CC:  string/lib_flsll.c
+CC:  string/lib_isbasedigit.c
+CC:  string/lib_memset.c
+CC:  string/lib_memchr.c
+CC:  string/lib_memccpy.c
+CC:  string/lib_memcmp.c
+CC:  string/lib_memmove.c
+CC:  string/lib_skipspace.c
+CC:  string/lib_stpcpy.c
+CC:  string/lib_strcasecmp.c
+CC:  string/lib_strcat.c
+CC:  string/lib_strchr.c
+CC:  string/lib_strcpy.c
+CC:  string/lib_strcmp.c
+CC:  string/lib_strcspn.c
+CC:  string/lib_strdup.c
+CC:  string/lib_strerror.c
+CC:  string/lib_strlen.c
+CC:  string/lib_strnlen.c
+CC:  string/lib_strncasecmp.c
+CC:  string/lib_strncat.c
+CC:  string/lib_strncmp.c
+CC:  string/lib_strncpy.c
+CC:  string/lib_strndup.c
+CC:  string/lib_strcasestr.c
+CC:  string/lib_strpbrk.c
+CC:  string/lib_strrchr.c
+CC:  string/lib_strspn.c
+CC:  string/lib_strstr.c
+CC:  string/lib_strtok.c
+CC:  string/lib_strtokr.c
+CC:  string/lib_strerrorr.c
+CC:  string/lib_explicit_bzero.c
+CC:  string/lib_memcpy.c
+CC:  symtab/symtab_findbyname.c
+CC:  symtab/symtab_findbyvalue.c
+CC:  symtab/symtab_findorderedbyname.c
+CC:  symtab/symtab_findorderedbyvalue.c
+CC:  syslog/lib_syslog.c
+CC:  syslog/lib_setlogmask.c
+CC:  time/lib_strftime.c
+CC:  time/lib_calendar2utc.c
+CC:  time/lib_daysbeforemonth.c
+CC:  time/lib_gettimeofday.c
+CC:  time/lib_isleapyear.c
+CC:  time/lib_settimeofday.c
+CC:  time/lib_time.c
+CC:  time/lib_difftime.c
+CC:  time/lib_nanosleep.c
+CC:  time/lib_mktime.c
+CC:  time/lib_gmtime.c
+CC:  time/lib_gmtimer.c
+CC:  uio/lib_readv.c
+CC:  uio/lib_writev.c
+CC:  unistd/lib_access.c
+CC:  unistd/lib_swab.c
+CC:  unistd/lib_getopt.c
+CC:  unistd/lib_getoptargp.c
+CC:  unistd/lib_getoptindp.c
+CC:  unistd/lib_getoptoptp.c
+CC:  unistd/lib_chdir.c
+CC:  unistd/lib_getcwd.c
+CC:  unistd/lib_truncate.c
+CC:  unistd/lib_sleep.c
+CC:  unistd/lib_usleep.c
+AR:    bin/lib_readdirr.o  bin/lib_telldir.o  bin/lib_fixedmath.o  bin/lib_b16sin.o  bin/lib_b16cos.o  bin/lib_b16atan2.o  bin/lib_ubsqrt.o  bin/lib_imaxabs.o  bin/lib_strtoimax.o  bin/lib_strtoumax.o  bin/lib_basename.o  bin/lib_dirname.o  bin/lib_stream.o  bin/lib_utsname.o  bin/lib_xorshift128.o  bin/lib_tea_encrypt.o  bin/lib_tea_decrypt.o  bin/lib_filesem.o  bin/lib_umul32.o  bin/lib_umul64.o  bin/lib_umul32x64.o  bin/lib_uadd32x64.o  bin/lib_uadd64.o  bin/lib_usub64x32.o  bin/lib_usub64.o  bin/lib_sendfile.o  bin/lib_streamsem.o  bin/lib_crc64.o  bin/lib_crc32.o  bin/lib_crc16.o  bin/lib_crc8.o  bin/lib_dumpbuffer.o  bin/lib_match.o  bin/lib_addrconfig.o  bin/lib_etherntoa.o  bin/lib_htons.o  bin/lib_htonl.o  bin/lib_inetaddr.o  bin/lib_inetntoa.o  bin/lib_inetntop.o  bin/lib_inetpton.o  bin/pthread_attr_init.o  bin/pthread_attr_destroy.o  bin/pthread_attr_setschedpolicy.o  bin/pthread_attr_getschedpolicy.o  bin/pthread_attr_setinheritsched.o  bin/pthread_attr_getinheritsched.o  bin/pthread_attr_setstacksize.o  bin/pthread_attr_getstacksize.o  bin/pthread_attr_setschedparam.o  bin/pthread_attr_getschedparam.o  bin/pthread_barrierattr_init.o  bin/pthread_barrierattr_destroy.o  bin/pthread_barrierattr_getpshared.o  bin/pthread_barrierattr_setpshared.o  bin/pthread_barrierinit.o  bin/pthread_barrierdestroy.o  bin/pthread_barrierwait.o  bin/pthread_condattr_init.o  bin/pthread_condattr_destroy.o  bin/pthread_condinit.o  bin/pthread_conddestroy.o  bin/pthread_mutexattr_init.o  bin/pthread_mutexattr_destroy.o  bin/pthread_mutexattr_getpshared.o  bin/pthread_mutexattr_setpshared.o  bin/pthread_mutexattr_setprotocol.o  bin/pthread_mutexattr_getprotocol.o  bin/pthread_mutexattr_settype.o  bin/pthread_mutexattr_gettype.o  bin/pthread_mutexattr_setrobust.o  bin/pthread_mutexattr_getrobust.o  bin/pthread_setcancelstate.o  bin/pthread_setcanceltype.o  bin/pthread_testcancel.o  bin/pthread_rwlock.o  bin/pthread_rwlock_rdlock.o  bin/pthread_rwlock_wrlock.o  bin/pthread_once.o  bin/pthread_yield.o  bin/sq_addlast.o  bin/sq_addfirst.o  bin/sq_addafter.o  bin/sq_cat.o  bin/sq_rem.o  bin/sq_remlast.o  bin/sq_remfirst.o  bin/sq_remafter.o  bin/sq_count.o  bin/dq_addlast.o  bin/dq_addfirst.o  bin/dq_addafter.o  bin/dq_addbefore.o  bin/dq_cat.o  bin/dq_rem.o  bin/dq_remlast.o  bin/dq_remfirst.o  bin/dq_count.o  bin/sched_getprioritymax.o  bin/sched_getprioritymin.o  bin/task_setcanceltype.o  bin/task_testcancel.o  bin/sem_init.o  bin/sem_getprotocol.o  bin/sem_getvalue.o  bin/sem_setprotocol.o  bin/sig_addset.o  bin/sig_delset.o  bin/sig_emptyset.o  bin/sig_fillset.o  bin/sig_hold.o  bin/sig_ignore.o  bin/sig_ismember.o  bin/sig_pause.o  bin/sig_raise.o  bin/sig_relse.o  bin/sig_set.o  bin/signal.o  bin/sigwait.o  bin/lib_psfa_addaction.o  bin/lib_psfa_addclose.o  bin/lib_psfa_adddup2.o  bin/lib_psfa_addopen.o  bin/lib_psfa_destroy.o  bin/lib_psfa_init.o  bin/lib_psa_getflags.o  bin/lib_psa_getschedparam.o  bin/lib_psa_getschedpolicy.o  bin/lib_psa_init.o  bin/lib_psa_setflags.o  bin/lib_psa_setschedparam.o  bin/lib_psa_setschedpolicy.o  bin/lib_psa_getsigmask.o  bin/lib_psa_setsigmask.o  bin/lib_psa_getstacksize.o  bin/lib_psa_setstacksize.o  bin/lib_fileno.o  bin/lib_printf.o  bin/lib_sprintf.o  bin/lib_asprintf.o  bin/lib_snprintf.o  bin/lib_libsprintf.o  bin/lib_vsprintf.o  bin/lib_vasprintf.o  bin/lib_vsnprintf.o  bin/lib_libvsprintf.o  bin/lib_dprintf.o  bin/lib_vdprintf.o  bin/lib_meminstream.o  bin/lib_memoutstream.o  bin/lib_memsistream.o  bin/lib_memsostream.o  bin/lib_lowoutstream.o  bin/lib_zeroinstream.o  bin/lib_nullinstream.o  bin/lib_nulloutstream.o  bin/lib_sscanf.o  bin/lib_libnoflush.o  bin/lib_libsnoflush.o  bin/lib_rawinstream.o  bin/lib_rawoutstream.o  bin/lib_rawsistream.o  bin/lib_rawsostream.o  bin/lib_remove.o  bin/lib_fopen.o  bin/lib_freopen.o  bin/lib_fclose.o  bin/lib_fread.o  bin/lib_libfread.o  bin/lib_fseek.o  bin/lib_ftell.o  bin/lib_fsetpos.o  bin/lib_fgetpos.o  bin/lib_fgetc.o  bin/lib_fgets.o  bin/lib_gets_s.o  bin/lib_gets.o  bin/lib_libfgets.o  bin/lib_fwrite.o  bin/lib_libfwrite.o  bin/lib_fflush.o  bin/lib_libflushall.o  bin/lib_libfflush.o  bin/lib_rdflush.o  bin/lib_wrflush.o  bin/lib_fputc.o  bin/lib_puts.o  bin/lib_fputs.o  bin/lib_ungetc.o  bin/lib_vprintf.o  bin/lib_fprintf.o  bin/lib_vfprintf.o  bin/lib_stdinstream.o  bin/lib_stdoutstream.o  bin/lib_stdsistream.o  bin/lib_stdsostream.o  bin/lib_perror.o  bin/lib_feof.o  bin/lib_ferror.o  bin/lib_clearerr.o  bin/lib_setbuf.o  bin/lib_setvbuf.o  bin/lib_abs.o  bin/lib_abort.o  bin/lib_div.o  bin/lib_ldiv.o  bin/lib_lldiv.o  bin/lib_itoa.o  bin/lib_labs.o  bin/lib_llabs.o  bin/lib_bsearch.o  bin/lib_rand.o  bin/lib_qsort.o  bin/lib_srand.o  bin/lib_strtol.o  bin/lib_strtoll.o  bin/lib_strtoul.o  bin/lib_strtoull.o  bin/lib_strtod.o  bin/lib_strtof.o  bin/lib_strtold.o  bin/lib_checkbase.o  bin/lib_ffs.o  bin/lib_ffsl.o  bin/lib_ffsll.o  bin/lib_fls.o  bin/lib_flsl.o  bin/lib_flsll.o  bin/lib_isbasedigit.o  bin/lib_memset.o  bin/lib_memchr.o  bin/lib_memccpy.o  bin/lib_memcmp.o  bin/lib_memmove.o  bin/lib_skipspace.o  bin/lib_stpcpy.o  bin/lib_strcasecmp.o  bin/lib_strcat.o  bin/lib_strchr.o  bin/lib_strcpy.o  bin/lib_strcmp.o  bin/lib_strcspn.o  bin/lib_strdup.o  bin/lib_strerror.o  bin/lib_strlen.o  bin/lib_strnlen.o  bin/lib_strncasecmp.o  bin/lib_strncat.o  bin/lib_strncmp.o  bin/lib_strncpy.o  bin/lib_strndup.o  bin/lib_strcasestr.o  bin/lib_strpbrk.o  bin/lib_strrchr.o  bin/lib_strspn.o  bin/lib_strstr.o  bin/lib_strtok.o  bin/lib_strtokr.o  bin/lib_strerrorr.o  bin/lib_explicit_bzero.o  bin/lib_memcpy.o  bin/symtab_findbyname.o  bin/symtab_findbyvalue.o  bin/symtab_findorderedbyname.o  bin/symtab_findorderedbyvalue.o  bin/lib_syslog.o  bin/lib_setlogmask.o  bin/lib_strftime.o  bin/lib_calendar2utc.o  bin/lib_daysbeforemonth.o  bin/lib_gettimeofday.o  bin/lib_isleapyear.o  bin/lib_settimeofday.o  bin/lib_time.o  bin/lib_difftime.o  bin/lib_nanosleep.o  bin/lib_mktime.o  bin/lib_gmtime.o  bin/lib_gmtimer.o  bin/lib_readv.o  bin/lib_writev.o  bin/lib_access.o  bin/lib_swab.o  bin/lib_getopt.o  bin/lib_getoptargp.o  bin/lib_getoptindp.o  bin/lib_getoptoptp.o  bin/lib_chdir.o  bin/lib_getcwd.o  bin/lib_truncate.o  bin/lib_sleep.o  bin/lib_usleep.o
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/libc'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/mm'
+CC:  mm_heap/mm_initialize.c
+CC:  mm_heap/mm_sem.c
+CC:  mm_heap/mm_addfreechunk.c
+CC:  mm_heap/mm_size2ndx.c
+CC:  mm_heap/mm_shrinkchunk.c
+CC:  mm_heap/mm_brkaddr.c
+CC:  mm_heap/mm_calloc.c
+CC:  mm_heap/mm_extend.c
+CC:  mm_heap/mm_free.c
+CC:  mm_heap/mm_mallinfo.c
+CC:  mm_heap/mm_malloc.c
+CC:  mm_heap/mm_memalign.c
+CC:  mm_heap/mm_realloc.c
+CC:  mm_heap/mm_zalloc.c
+CC:  umm_heap/umm_initialize.c
+CC:  umm_heap/umm_addregion.c
+CC:  umm_heap/umm_sem.c
+CC:  umm_heap/umm_brkaddr.c
+CC:  umm_heap/umm_calloc.c
+CC:  umm_heap/umm_extend.c
+CC:  umm_heap/umm_free.c
+CC:  umm_heap/umm_mallinfo.c
+CC:  umm_heap/umm_malloc.c
+CC:  umm_heap/umm_memalign.c
+CC:  umm_heap/umm_realloc.c
+CC:  umm_heap/umm_zalloc.c
+CC:  umm_heap/umm_globals.c
+AR:    bin/mm_initialize.o  bin/mm_sem.o  bin/mm_addfreechunk.o  bin/mm_size2ndx.o  bin/mm_shrinkchunk.o  bin/mm_brkaddr.o  bin/mm_calloc.o  bin/mm_extend.o  bin/mm_free.o  bin/mm_mallinfo.o  bin/mm_malloc.o  bin/mm_memalign.o  bin/mm_realloc.o  bin/mm_zalloc.o  bin/umm_initialize.o  bin/umm_addregion.o  bin/umm_sem.o  bin/umm_brkaddr.o  bin/umm_calloc.o  bin/umm_extend.o  bin/umm_free.o  bin/umm_mallinfo.o  bin/umm_malloc.o  bin/umm_memalign.o  bin/umm_realloc.o  bin/umm_zalloc.o  bin/umm_globals.o
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/mm'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/arch/arm/src'
+AS:  armv7-m/gnu/up_saveusercontext.S
+AS:  armv7-m/gnu/up_fullcontextrestore.S
+AS:  armv7-m/gnu/up_switchcontext.S
+AS:  armv7-m/gnu/up_testset.S
+AS:  armv7-m/gnu/vfork.S
+CC:  chip/stm32_allocateheap.c
+CC:  chip/stm32_start.c
+CC:  chip/stm32_rcc.c
+CC:  chip/stm32_lse.c
+CC:  chip/stm32_lsi.c
+CC:  chip/stm32_gpio.c
+CC:  chip/stm32_exti_gpio.c
+CC:  chip/stm32_flash.c
+chip/stm32_flash.c:69:4: warning: #warning "Default Flash Configuration Used - See Override Flash Size Designator" [-Wcpp]
+ #  warning "Default Flash Configuration Used - See Override Flash Size Designator"
+    ^
+CC:  chip/stm32_irq.c
+CC:  chip/stm32_dma.c
+CC:  chip/stm32_lowputc.c
+CC:  chip/stm32_serial.c
+CC:  chip/stm32_spi.c
+CC:  chip/stm32_i2s.c
+CC:  chip/stm32_sdio.c
+CC:  chip/stm32_tim.c
+CC:  chip/stm32_waste.c
+CC:  chip/stm32_ccm.c
+CC:  chip/stm32_uid.c
+CC:  chip/stm32_capture.c
+CC:  chip/stm32_timerisr.c
+CC:  chip/stm32f40xxx_i2c.c
+CC:  chip/stm32_idle.c
+CC:  chip/stm32_pmstop.c
+CC:  chip/stm32_pmstandby.c
+CC:  chip/stm32_pmsleep.c
+CC:  chip/stm32_pminitialize.c
+CC:  chip/stm32_pwr.c
+CC:  chip/stm32_exti_pwr.c
+CC:  armv7-m/up_assert.c
+CC:  armv7-m/up_blocktask.c
+CC:  armv7-m/up_copyfullstate.c
+CC:  common/up_createstack.c
+CC:  common/up_mdelay.c
+CC:  common/up_udelay.c
+CC:  common/up_exit.c
+CC:  common/up_initialize.c
+CC:  armv7-m/up_initialstate.c
+CC:  common/up_interruptcontext.c
+CC:  armv7-m/up_memfault.c
+CC:  common/up_modifyreg8.c
+CC:  common/up_modifyreg16.c
+CC:  common/up_modifyreg32.c
+CC:  armv7-m/up_releasepending.c
+CC:  common/up_releasestack.c
+CC:  armv7-m/up_reprioritizertr.c
+CC:  armv7-m/up_schedulesigaction.c
+CC:  armv7-m/up_sigdeliver.c
+CC:  common/up_stackframe.c
+CC:  armv7-m/up_systemreset.c
+CC:  armv7-m/up_unblocktask.c
+CC:  common/up_usestack.c
+CC:  armv7-m/up_doirq.c
+CC:  armv7-m/up_hardfault.c
+CC:  armv7-m/up_svcall.c
+CC:  common/up_vfork.c
+AR:  up_saveusercontext.o up_fullcontextrestore.o up_switchcontext.o up_testset.o vfork.o stm32_allocateheap.o stm32_start.o stm32_rcc.o stm32_lse.o stm32_lsi.o stm32_gpio.o stm32_exti_gpio.o stm32_flash.o stm32_irq.o stm32_dma.o stm32_lowputc.o stm32_serial.o stm32_spi.o stm32_i2s.o stm32_sdio.o stm32_tim.o stm32_waste.o stm32_ccm.o stm32_uid.o stm32_capture.o stm32_timerisr.o stm32f40xxx_i2c.o stm32_idle.o stm32_pmstop.o stm32_pmstandby.o stm32_pmsleep.o stm32_pminitialize.o stm32_pwr.o stm32_exti_pwr.o up_assert.o up_blocktask.o up_copyfullstate.o up_createstack.o up_mdelay.o up_udelay.o up_exit.o up_initialize.o up_initialstate.o up_interruptcontext.o up_memfault.o up_modifyreg8.o up_modifyreg16.o up_modifyreg32.o up_releasepending.o up_releasestack.o up_reprioritizertr.o up_schedulesigaction.o up_sigdeliver.o up_stackframe.o up_systemreset.o up_unblocktask.o up_usestack.o up_doirq.o up_hardfault.o up_svcall.o up_vfork.o
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/arch/arm/src'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/libxx'
+CXX:  libxx_cxapurevirtual.cxx
+CXX:  libxx_eabi_atexit.cxx
+CXX:  libxx_cxa_atexit.cxx
+CXX:  libxx_delete.cxx
+CXX:  libxx_delete_sized.cxx
+CXX:  libxx_deletea.cxx
+CXX:  libxx_deletea_sized.cxx
+CXX:  libxx_new.cxx
+CXX:  libxx_newa.cxx
+CXX:  libxx_stdthrow.cxx
+CXX:  libxx_cxa_guard.cxx
+AR:    libxx_cxapurevirtual.o libxx_eabi_atexit.o libxx_cxa_atexit.o libxx_delete.o libxx_delete_sized.o libxx_deletea.o libxx_deletea_sized.o libxx_new.o libxx_newa.o libxx_stdthrow.o libxx_cxa_guard.o
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/libxx'
+make[1]: Entering directory '/home/sqj/workspace/Embos/apps'
+make[2]: Entering directory '/home/sqj/workspace/Embos/apps/examples/nsh'
+CC:  nsh_main.c
+AR:     nsh_main.o
+make[2]: Leaving directory '/home/sqj/workspace/Embos/apps/examples/nsh'
+make[2]: Entering directory '/home/sqj/workspace/Embos/apps/nshlib'
+CC:  nsh_init.c
+CC:  nsh_parse.c
+CC:  nsh_console.c
+CC:  nsh_script.c
+CC:  nsh_system.c
+CC:  nsh_command.c
+CC:  nsh_fscmds.c
+CC:  nsh_ddcmd.c
+CC:  nsh_proccmds.c
+CC:  nsh_mmcmds.c
+CC:  nsh_timcmds.c
+CC:  nsh_envcmds.c
+CC:  nsh_syscmds.c
+CC:  nsh_dbgcmds.c
+CC:  nsh_session.c
+CC:  nsh_fsutils.c
+CC:  nsh_builtin.c
+CC:  nsh_mntcmds.c
+CC:  nsh_consolemain.c
+CC:  nsh_test.c
+AR:   nsh_init.o nsh_parse.o nsh_console.o nsh_script.o nsh_system.o nsh_command.o nsh_fscmds.o nsh_ddcmd.o nsh_proccmds.o nsh_mmcmds.o nsh_timcmds.o nsh_envcmds.o nsh_syscmds.o nsh_dbgcmds.o nsh_session.o nsh_fsutils.o nsh_builtin.o nsh_mntcmds.o nsh_consolemain.o nsh_test.o
+make[2]: Leaving directory '/home/sqj/workspace/Embos/apps/nshlib'
+make[2]: Entering directory '/home/sqj/workspace/Embos/apps/builtin'
+CC:  builtin_forindex.c
+CC:  builtin_list.c
+CC:  exec_builtin.c
+AR:   builtin_forindex.o builtin_list.o exec_builtin.o
+make[2]: Leaving directory '/home/sqj/workspace/Embos/apps/builtin'
+make[2]: Entering directory '/home/sqj/workspace/Embos/apps/system/readline'
+CC:  readline.c
+CC:  readline_common.c
+AR:   readline.o readline_common.o
+make[2]: Leaving directory '/home/sqj/workspace/Embos/apps/system/readline'
+make[2]: Entering directory '/home/sqj/workspace/Embos/apps/platform'
+CC:  gnu/gnu_cxxinitialize.c
+AR:    bin/gnu_cxxinitialize.o
+make[2]: Leaving directory '/home/sqj/workspace/Embos/apps/platform'
+make[1]: Leaving directory '/home/sqj/workspace/Embos/apps'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/fs'
+CC:  fs_initialize.c
+CC:  inode/fs_files.c
+CC:  inode/fs_foreachinode.c
+CC:  inode/fs_inode.c
+CC:  inode/fs_inodeaddref.c
+CC:  inode/fs_inodebasename.c
+CC:  inode/fs_inodefind.c
+CC:  inode/fs_inodefree.c
+CC:  inode/fs_inoderelease.c
+CC:  inode/fs_inoderemove.c
+CC:  inode/fs_inodereserve.c
+CC:  inode/fs_inodesearch.c
+CC:  inode/fs_filedetach.c
+CC:  vfs/fs_close.c
+CC:  vfs/fs_dup.c
+CC:  vfs/fs_dup2.c
+CC:  vfs/fs_fcntl.c
+CC:  vfs/fs_dupfd.c
+CC:  vfs/fs_dupfd2.c
+CC:  vfs/fs_epoll.c
+CC:  vfs/fs_fstat.c
+CC:  vfs/fs_fstatfs.c
+CC:  vfs/fs_getfilep.c
+CC:  vfs/fs_ioctl.c
+CC:  vfs/fs_lseek.c
+CC:  vfs/fs_mkdir.c
+CC:  vfs/fs_open.c
+CC:  vfs/fs_poll.c
+CC:  vfs/fs_read.c
+CC:  vfs/fs_rename.c
+CC:  vfs/fs_rmdir.c
+CC:  vfs/fs_statfs.c
+CC:  vfs/fs_stat.c
+CC:  vfs/fs_select.c
+CC:  vfs/fs_unlink.c
+CC:  vfs/fs_write.c
+CC:  vfs/fs_fsync.c
+CC:  vfs/fs_truncate.c
+CC:  vfs/fs_pread.c
+CC:  vfs/fs_pwrite.c
+CC:  vfs/fs_link.c
+CC:  vfs/fs_readlink.c
+CC:  vfs/fs_fdopen.c
+CC:  driver/fs_registerdriver.c
+CC:  driver/fs_unregisterdriver.c
+CC:  driver/fs_registerblockdriver.c
+CC:  driver/fs_unregisterblockdriver.c
+CC:  driver/fs_findblockdriver.c
+CC:  driver/fs_openblockdriver.c
+CC:  driver/fs_closeblockdriver.c
+CC:  driver/fs_blockproxy.c
+CC:  dirent/fs_closedir.c
+CC:  dirent/fs_opendir.c
+CC:  dirent/fs_readdir.c
+CC:  dirent/fs_rewinddir.c
+CC:  dirent/fs_seekdir.c
+CC:  mmap/fs_mmap.c
+CC:  mqueue/mq_open.c
+CC:  mqueue/mq_close.c
+CC:  mqueue/mq_unlink.c
+CC:  mount/fs_mount.c
+CC:  mount/fs_umount2.c
+CC:  mount/fs_foreachmountpoint.c
+CC:  mount/fs_procfs_mount.c
+CC:  mount/fs_gettype.c
+CC:  procfs/fs_procfs.c
+CC:  procfs/fs_procfsutil.c
+CC:  procfs/fs_procfsproc.c
+CC:  procfs/fs_procfsuptime.c
+CC:  procfs/fs_procfscpuload.c
+CC:  procfs/fs_procfsmeminfo.c
+AR:   fs_initialize.o fs_files.o fs_foreachinode.o fs_inode.o fs_inodeaddref.o fs_inodebasename.o fs_inodefind.o fs_inodefree.o fs_inoderelease.o fs_inoderemove.o fs_inodereserve.o fs_inodesearch.o fs_filedetach.o fs_close.o fs_dup.o fs_dup2.o fs_fcntl.o fs_dupfd.o fs_dupfd2.o fs_epoll.o fs_fstat.o fs_fstatfs.o fs_getfilep.o fs_ioctl.o fs_lseek.o fs_mkdir.o fs_open.o fs_poll.o fs_read.o fs_rename.o fs_rmdir.o fs_statfs.o fs_stat.o fs_select.o fs_unlink.o fs_write.o fs_fsync.o fs_truncate.o fs_pread.o fs_pwrite.o fs_link.o fs_readlink.o fs_fdopen.o fs_registerdriver.o fs_unregisterdriver.o fs_registerblockdriver.o fs_unregisterblockdriver.o fs_findblockdriver.o fs_openblockdriver.o fs_closeblockdriver.o fs_blockproxy.o fs_closedir.o fs_opendir.o fs_readdir.o fs_rewinddir.o fs_seekdir.o fs_mmap.o mq_open.o mq_close.o mq_unlink.o fs_mount.o fs_umount2.o fs_foreachmountpoint.o fs_procfs_mount.o fs_gettype.o fs_procfs.o fs_procfsutil.o fs_procfsproc.o fs_procfsuptime.o fs_procfscpuload.o fs_procfsmeminfo.o
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/fs'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/binfmt'
+CC:  binfmt_globals.c
+CC:  binfmt_register.c
+CC:  binfmt_unregister.c
+CC:  binfmt_loadmodule.c
+CC:  binfmt_unloadmodule.c
+CC:  binfmt_execmodule.c
+CC:  binfmt_exec.c
+CC:  binfmt_copyargv.c
+CC:  binfmt_dumpmodule.c
+CC:  builtin.c
+CC:  libbuiltin/libbuiltin_getname.c
+CC:  libbuiltin/libbuiltin_isavail.c
+AR:   binfmt_globals.o binfmt_register.o binfmt_unregister.o binfmt_loadmodule.o binfmt_unloadmodule.o binfmt_execmodule.o binfmt_exec.o binfmt_copyargv.o binfmt_dumpmodule.o builtin.o libbuiltin_getname.o libbuiltin_isavail.o
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/binfmt'
+make[1]: Entering directory '/home/sqj/workspace/Embos/nuttx/arch/arm/src'
+AS:  chip/gnu/stm32_vectors.S
+make[2]: Entering directory '/home/sqj/workspace/Embos/nuttx/configs/stm32f4discovery/src'
+CC:  stm32_boot.c
+CC:  stm32_bringup.c
+CC:  stm32_spi.c
+CC:  stm32_autoleds.c
+CC:  stm32_buttons.c
+CC:  stm32_usb.c
+stm32_usb.c:68:4: warning: #warning "CONFIG_STM32_OTGFS is enabled but neither CONFIG_USBDEV nor CONFIG_USBHOST" [-Wcpp]
+ #  warning "CONFIG_STM32_OTGFS is enabled but neither CONFIG_USBDEV nor CONFIG_USBHOST"
+    ^
+CC:  stm32_appinit.c
+AR:   stm32_boot.o stm32_bringup.o stm32_spi.o stm32_autoleds.o stm32_buttons.o stm32_usb.o stm32_appinit.o 
+make[2]: Leaving directory '/home/sqj/workspace/Embos/nuttx/configs/stm32f4discovery/src'
+LD: nuttx
+make[1]: Leaving directory '/home/sqj/workspace/Embos/nuttx/arch/arm/src'
+CP: nuttx.hex
+CP: nuttx.bin
+sqj@ubuntu:~/workspace/Embos/nuttx$ pwd
+/home/sqj/workspace/Embos/nuttx
+sqj@ubuntu:~/workspace/Embos/nuttx$ cd ../
+sqj@ubuntu:~/workspace/Embos$ ls
+apps  kconfig-frontends-3.10.0.0  kconfig-frontends-3.10.0.0.tar.bz2  nuttx
+sqj@ubuntu:~/workspace/Embos$ 
+
+
+基于Rtt的zstack-linux-gateway移植
+1.
+    测试基本驱动
+    GPIO
+2.
+    增加一些适配结构体
+    lwip目前只有一个网卡接口，所以只要监听一个就好。
+3.
+    zb_version_query通信成功。
+    NPI部分，之前在linux上用的架构是服务器监听多个端口，通过网络传输。
+        --在rtt上采用多邮箱传输的机制。
+    
+4.
+    IAR对c++文件的编译，只有文件格式为.cpp时才能使用。
+5.
+    整体转换到eclipse+scons和gcc编译构建的平台上来。
+    但是不支持类似于iar的多个工程目录操作。
+    # we need to seperate the variant_dir for BSPs and the kernels. BSPs could
+    # have their own components etc. If they point to the same folder, SCons
+    # would find the wrong source code to compile.
+    bsp_vdir = 'build/'
+    kernel_vdir = 'build/kernel'
+    # board build script
+    objs = SConscript('SConscript', variant_dir=bsp_vdir, duplicate=0)
+    《》后期考虑
+6.
+    同样的工程，IAR编译 ls时不报错，gcc会报错。
+    msh />ls
+    Directory /:
+    System Volume Information<DIR>                    
+    ((rt_uint8_t *)rmem >= (rt_uint8_t *)heap_ptr && (rt_uint8_t *)rmem < (rt_uint8_t *)heap_end) assertion failed at function:rt_
+7.
+    arm-gcc编译和rtt sys库冲突的问题，通过强制增加arm-gcc头文件中的排除编译宏排除
+    通过强制宏定义的方式排除libc和rtt中c库的冲突问题，目前也只能这样了
+
+    d:/dev_tools/compiletools/win32/gcc-arm-none-eabi-7/7 2017-q4-major/bin/../lib/gcc/arm-none-eabi/7.2.1/../../../../arm-none-eabi/lib/thumb/v7-m\libc.a(lib_a-fclose.o): In function `fclose':
+    fclose.c:(.text.fclose+0x0): multiple definition of `fclose'
+    build\kernel\components\dfs\src\dfs_posix.o:E:\AnchorDevItems\EmbOS\rt-thread\Rt-Thread_Stacks\RT_Thread\rt-thread\components\dfs\src/dfs_posix.c:1059: first defined here
+    d:/dev_tools/compiletools/win32/gcc-arm-none-eabi-7/7 2017-q4-major/bin/../lib/gcc/arm-none-eabi/7.2.1/../../../../arm-none-eabi/lib/thumb/v7-m\libc.a(lib_a-fflush.o): In function `fflush':
+    fflush.c:(.text.fflush+0x0): multiple definition of `fflush'
+    build\kernel\components\dfs\src\dfs_posix.o:E:\AnchorDevItems\EmbOS\rt-thread\Rt-Thread_Stacks\RT_Thread\rt-thread\components\dfs\src/dfs_posix.c:1081: first defined here
+
+    链接冲突的问题，可以通过替换函数名的方式适配linux中的一些函数避免链接问题。
+8.
+    start_npi
+    start_zlsznp
+    start_netmgr
+    start_gateway
+    start_otaserver
+9.
+    gateway的串口通信机制。
+    定义了公用函数：
+        打开设备
+        关闭设备
+        发送异步数据
+        发送同步数据
+    建立了两个线程
+        异步回调线程
+        串口接收线程
+            轮询睡眠读取fd的数据
+
+    npi_ipc_server端的处理模式：
+        初始化底层通信驱动，然后监听一个端口。
+        对于znp，netmgr，gateway，otaserver这客户端来说，四个应用连接到server。
+        客户端->服务器
+            server端用select机制查询四个客户端描述符有没有数据包并进行解析。
+            数据包的接收采用确定通信描述符，单独处理：部分读取判断再全部读取解析的方式。
+            由于没有在接收处理时对客户端类别做判断，只是把socket通信当成一种纯粹的传输工具，所以无需使用四个邮箱监听，一个就可以。一个邮箱监听并解析多个邮件。
+            邮箱只接收一次的处理逻辑暂时理不顺，先实现一个客户端部分的线程。
+        服务器->客户端
+            目前是从npi底层接收数据包后强制发送给所有连接。
+
+10. protobuf的引用问题。
+    直接将protobuf引进rtt的scons编译系统会比较困难且容易报错，我们需要的只是他的函数和头文件。
+    所以先编成头文件和库，然后链接进去试试。
+    --march=armv7
+    必须要用arm-linux-gcc而不是arm-none-gcc，只能测试arm-linux-gcc编译出来的库能不能被使用了。
+    
+11.
+    采用多个管道的读写是一个不错的移植选择，因为管道兼具文件描述符的所有读写特征。
+    启动的时候，npi必须将所有管理应用的管道全部读写打开，这样方便管理应用连接。
+
+12.
+    npi是一个server，api_client负责连接到npi服务器。
+    api_server负责将独立的zigbee控制应用封装成server，监听来自客户应用的命令。
+13.
+    apicInstance_t结构体，对于每一个管理应用（nwkmgr，ota，gateway），作为一个保留指针传递作为一个handler。
+    其中有一个int整型，作为socket的识别符。
+14.
+    zigbee gateway 从socket转到pipe的思路：
+    1. 将socket的监听连接改为监听一个独立的管道，然后生成与应用相关的管道描述符
+        应用给服务通过独立管道发送连接数据，服务端接收到数据后反馈当前管道的id，然后双双建立管道。
+    2. 将多socket连接模式改为按数量增长的fifo模式
+15.
+    用一个单独的例子来测试arm-gcc编译的库文件和头文件能否在rtt+scons上正确运行。
+
+16.
+    编译器链接找不到时 直接软链接到编译器默认的库路径下。
+
+17.
+    用到了pollfd结构体，但是管道由于是半双工通信，需要存储两个fd描述符，所以这边要扩展结构体。
+        不能扩展，用到了"if (poll("这个系统函数，传参限制，无法扩展，只能在其他结构体上想办法。
+
+    demo里poll的调用，除了监听网络通信描述符，还监听了时间等描述符，对于一个服务客户端来说，只要具备一组管道读写描述符就可以了。
+
+18.
+    ipc和管理server之间的通讯或者连接只有一个，只需要一个固定管道就好。
+    NPI_PORT            2533
+    NWKMGR_SERVER_PORT  2540
+    zstack_znp_port     2536
+    OTA_PORT            2525
+    GATEWAY_PORT        2541
+
+19.
+    zlsznp连接到npi server
+    nwkmgr连接到zlsznp
+    ota和gateway连接到zlsznp和nwkmgr
+    application连接到nwkmgr，gateway，zstack_znp
+20.
+    不知道为什么，枚举指针作为线程传参会失败。
+21.
+    zlsznp和npi_lnx_ipc的通信基本上成功。
+    nwkmgr先启动了服务后接收数据。
+        NETWORK MANAGER started (pid 1149) at Sat Mar 10 02:15:16 UTC 2018
+22.
+    基于ARM开发板先完成派位系统架构，再迁移到MCU平台上来。
+
+     + ' -std=gnu99'
+23.
+    用json替代protobuf-c
+    主要要实现如下几个函数：
+    protobuf_c_message_pack
+    protobuf_c_message_pack_to_buffer
+    protobuf_c_message_unpack
+    protobuf_c_message_free_unpacked
+    protobuf_c_message_get_packed_size
+
+    protobuf_c的代码中可以直接编译生成库，无需protobuf支持。
+    但是用arm-none-eabi-gcc编译会报错，丢失对
+    ｛
+        __assert_func
+        __libc_init_array
+    ｝的定义
+24.
+    mkfifo中的path是pipe去掉/dev后的名字
+    open打开时要加上/dev前缀
+25.
+    rtt的管道读写阻塞和非阻塞测试不完整，考虑在一个新的分支中用iar测试。
+26.
+    tools/building.py:    objs.extend(SConscript(Rtt_Root + '/components/SConscript',
+    scons中新增的组件，要在building.py中申明
+27.
+    用到管道的线程，分配的线程空间要足够大。
+    一般线程调度出现问题都是内存问题。
