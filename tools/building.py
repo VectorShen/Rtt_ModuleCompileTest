@@ -327,6 +327,7 @@ def PrepareBuilding(env, root_directory, has_libcpu=False, remove_components = [
     # would find the wrong source code to compile.
     bsp_vdir = 'build'
     kernel_vdir = 'build/kernel'
+    examples_vdir = 'build/examples'
     # board build script
     objs = SConscript('SConscript', variant_dir=bsp_vdir, duplicate=0)
     # include kernel
@@ -341,6 +342,8 @@ def PrepareBuilding(env, root_directory, has_libcpu=False, remove_components = [
                            variant_dir=kernel_vdir + '/components',
                            duplicate=0,
                            exports='remove_components'))
+    # include examples
+    objs.extend(SConscript(Rtt_Root + '/examples/SConscript', variant_dir=examples_vdir + '/examples', duplicate=0))
 
     return objs
 

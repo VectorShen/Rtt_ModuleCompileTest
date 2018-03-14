@@ -6,7 +6,7 @@
 
 /* RT-Thread Kernel */
 
-#define RT_NAME_MAX 8
+#define RT_NAME_MAX 20
 #define RT_ALIGN_SIZE 4
 /* RT_THREAD_PRIORITY_8 is not set */
 #define RT_THREAD_PRIORITY_32
@@ -53,6 +53,14 @@
 #define ARCH_ARM_CORTEX_M3
 
 /* RT-Thread Components */
+/* RT-Thread Components Drivers */
+/* RT-Thread Components Drivers Src */
+//#define RT_USING_TC
+#define RT_USING_COMPONENTS_DRIVERS_PIPE
+#ifdef RT_USING_COMPONENTS_DRIVERS_PIPE
+#define RT_PIPE_BUFSZ 128
+#define RT_USING_COMPONENTS_DRIVERS_PIPE_TEST
+#endif /* RT_USING_COMPONENTS_DRIVERS_PIPE */
 
 /* RT_USING_COMPONENTS_INIT is not set */
 #define RT_USING_COMPONENTS_INIT

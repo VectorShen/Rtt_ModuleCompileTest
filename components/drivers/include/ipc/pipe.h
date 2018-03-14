@@ -33,4 +33,9 @@ typedef struct rt_pipe_device rt_pipe_t;
 
 rt_pipe_t *rt_pipe_create(const char *name, int bufsz);
 
+#ifdef RT_USING_POSIX
+int pipe(int fildes[2]);
+int mkfifo(const char *path, mode_t mode);
+#endif
+
 #endif /* PIPE_H__ */

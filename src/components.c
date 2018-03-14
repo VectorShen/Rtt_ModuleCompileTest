@@ -137,6 +137,23 @@ void rt_components_init(void)
 #endif
 }
 
+/**
+ * RT-Thread Components Test
+ */
+#ifdef RT_USING_COMPONENTS_DRIVERS_PIPE
+#ifdef RT_USING_COMPONENTS_DRIVERS_PIPE_TEST
+extern void rt_test_read_write_pipe(void);
+#endif
+#endif
+void rt_components_test(void)
+{
+#ifdef RT_USING_COMPONENTS_DRIVERS_PIPE
+#ifdef RT_USING_COMPONENTS_DRIVERS_PIPE_TEST
+	rt_test_read_write_pipe();
+#endif /* RT_USING_COMPONENTS_DRIVERS_PIPE_TEST */
+#endif /* RT_USING_COMPONENTS_DRIVERS_PIPE */
+}
+
 #ifdef RT_USING_USER_MAIN
 
 void rt_application_init(void);

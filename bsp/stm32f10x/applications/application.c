@@ -88,6 +88,7 @@ void rt_init_thread_entry(void* parameter)
 #ifdef RT_USING_COMPONENTS_INIT
     /* initialization RT-Thread Components */
     rt_components_init();
+    rt_components_test();
 #endif
 
     /* Filesystem Initialization */
@@ -136,6 +137,7 @@ int rt_application_init(void)
 {
     rt_thread_t init_thread;
 
+#if 0
     rt_err_t result;
 
     /* init led thread */
@@ -151,6 +153,7 @@ int rt_application_init(void)
     {
         rt_thread_startup(&led_thread);
     }
+#endif
 
 #if (RT_THREAD_PRIORITY_MAX == 32)
     init_thread = rt_thread_create("init",
