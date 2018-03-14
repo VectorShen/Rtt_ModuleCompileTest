@@ -36,6 +36,7 @@
 #include <rtgui/calibration.h>
 #endif
 
+#if 0
 #include "led.h"
 
 ALIGN(RT_ALIGN_SIZE)
@@ -65,6 +66,7 @@ static void led_thread_entry(void* parameter)
         rt_thread_delay( RT_TICK_PER_SECOND/2 );
     }
 }
+#endif
 
 #ifdef RT_USING_RTGUI
 rt_bool_t cali_setup(void)
