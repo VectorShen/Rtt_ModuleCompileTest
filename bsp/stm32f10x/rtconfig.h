@@ -55,6 +55,7 @@
 /* RT-Thread Components */
 
 /* RT_USING_COMPONENTS_INIT is not set */
+#define RT_USING_COMPONENTS_INIT
 
 /* C++ features */
 
