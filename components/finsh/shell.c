@@ -49,6 +49,8 @@
 #include <stdio.h> /* for putchar */
 #endif
 
+rt_bool_t finsh_system_initialized = RT_FALSE;
+
 /* finsh thread */
 static struct rt_thread finsh_thread;
 ALIGN(RT_ALIGN_SIZE)
@@ -782,7 +784,10 @@ int finsh_system_init(void)
                             FINSH_THREAD_PRIORITY, 10);
 
     if (result == RT_EOK)
+    {
         rt_thread_startup(&finsh_thread);
+        finsh_system_initialized = RT_TRUE;
+    }
     return 0;
 }
 INIT_APP_EXPORT(finsh_system_init);

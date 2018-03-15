@@ -36,6 +36,10 @@
 #include <rtthread.h>
 #include <rthw.h>
 
+#ifdef RT_USING_FINSH
+#include <shell.h>
+#endif
+
 /* use precision */
 #define RT_PRINTF_PRECISION
 
@@ -1154,6 +1158,15 @@ void rt_kprintf(const char *fmt, ...)
     rt_size_t length;
     static char rt_log_buf[RT_CONSOLEBUF_SIZE];
 
+#ifdef FINSH_EXTEND_TO_RT_KPRINTF
+    const char* finsh_prompt = RT_NULL;
+    if(finsh_system_initialized == RT_TRUE)
+    {
+    	/* extend rt_kprintf function for first prompt finsh header */
+    	finsh_prompt = FINSH_PROMPT;
+    }
+#endif
+
     va_start(args, fmt);
     /* the return value of vsnprintf is the number of bytes that would be
      * written to buffer had if the size of the buffer been sufficiently
@@ -1166,17 +1179,34 @@ void rt_kprintf(const char *fmt, ...)
 #ifdef RT_USING_DEVICE
     if (_console_device == RT_NULL)
     {
+#ifdef FINSH_EXTEND_TO_RT_KPRINTF
+        if(finsh_system_initialized == RT_TRUE)
+        {
+        	rt_hw_console_output(finsh_prompt);
+        }
+#endif
         rt_hw_console_output(rt_log_buf);
     }
     else
     {
         rt_uint16_t old_flag = _console_device->open_flag;
-
         _console_device->open_flag |= RT_DEVICE_FLAG_STREAM;
+#ifdef FINSH_EXTEND_TO_RT_KPRINTF
+        if(finsh_system_initialized == RT_TRUE)
+        {
+        	rt_device_write(_console_device, 0, finsh_prompt, rt_strlen(finsh_prompt));
+        }
+#endif
         rt_device_write(_console_device, 0, rt_log_buf, length);
         _console_device->open_flag = old_flag;
     }
 #else
+#ifdef FINSH_EXTEND_TO_RT_KPRINTF
+    if(finsh_system_initialized == RT_TRUE)
+    {
+    	rt_hw_console_output(finsh_prompt);
+    }
+#endif
     rt_hw_console_output(rt_log_buf);
 #endif
     va_end(args);

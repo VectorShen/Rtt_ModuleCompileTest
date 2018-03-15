@@ -78,6 +78,7 @@
 /* Command shell */
 
 #define RT_USING_FINSH
+#ifdef RT_USING_FINSH
 #define FINSH_THREAD_NAME "tshell"
 #define FINSH_USING_HISTORY
 #define FINSH_HISTORY_LINES 5
@@ -86,10 +87,13 @@
 #define FINSH_THREAD_PRIORITY 20
 #define FINSH_THREAD_STACK_SIZE 4096
 #define FINSH_CMD_SIZE 80
+
+//#define FINSH_EXTEND_TO_RT_KPRINTF
 /* FINSH_USING_AUTH is not set */
 #define FINSH_USING_MSH
 #define FINSH_USING_MSH_DEFAULT
 /* FINSH_USING_MSH_ONLY is not set */
+#endif /* RT_USING_FINSH */
 
 /* Device virtual file system */
 

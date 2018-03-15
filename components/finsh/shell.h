@@ -111,6 +111,8 @@ struct finsh_shell
 #endif
 };
 
+extern rt_bool_t finsh_system_initialized;
+
 void finsh_set_echo(rt_uint32_t echo);
 rt_uint32_t finsh_get_echo(void);
 
