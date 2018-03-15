@@ -29,6 +29,8 @@
 extern "C" {
 #endif
 
+#include "ipc/waitqueue.h"
+
 struct rt_pollreq;
 typedef void (*poll_queue_proc)(rt_wqueue_t *, struct rt_pollreq *);
 
