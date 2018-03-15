@@ -1,0 +1,30 @@
+from building import *
+
+src = []
+path = [GetCurrentDir() + '/../']
+define = []
+
+protobuf_c_src = Split("""
+protobuf-c.c
+""")
+
+test_src = Split("""
+test/amessage_serialize_deserialize.c
+test/amessage.pb-c.c
+""")
+
+test_path = [GetCurrentDir() + '/test']
+
+protobuf_path = [GetCurrentDir()]
+
+if GetDepend(['RT_USING_PROTOBUF_C']):
+    src += protobuf_c_src
+    path += protobuf_path
+
+if GetDepend(['RT_USING_PROTOBUF_C']) and GetDepend(['RT_USING_PROTOBUF_C_TEST']):
+    src += test_src
+    path += test_path
+
+group = DefineGroup('protobuf_c', src, depend = ['RT_USING_PROTOBUF_C'], CPPPATH = path, CPPDEFINES=define)
+
+Return('group')

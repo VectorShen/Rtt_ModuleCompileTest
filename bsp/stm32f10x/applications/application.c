@@ -85,12 +85,24 @@ void cali_store(struct calibration_data *data)
 }
 #endif /* RT_USING_RTGUI */
 
+#ifdef RT_USING_PROTOBUF_C
+#ifdef RT_USING_PROTOBUF_C_TEST
+extern int amessage_main (void);
+#endif /* RT_USING_PROTOBUF_C_TEST */
+#endif /* RT_USING_PROTOBUF_C */
+
 void rt_init_thread_entry(void* parameter)
 {
 #ifdef RT_USING_COMPONENTS_INIT
     /* initialization RT-Thread Components */
     rt_components_init();
     rt_components_test();
+#endif
+
+#ifdef RT_USING_PROTOBUF_C
+#ifdef RT_USING_PROTOBUF_C_TEST
+    amessage_main();
+#endif
 #endif
 
     /* Filesystem Initialization */
