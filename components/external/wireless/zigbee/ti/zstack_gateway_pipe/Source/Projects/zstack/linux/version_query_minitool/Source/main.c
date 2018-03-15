@@ -71,6 +71,11 @@ struct termios old_tio;
 
 //static size_t context = 0;
 
+char* version_query_argvs[2] =
+{
+	"version_query_main", "/dev/uart2"
+};
+
 /*********************************************************************
  * FUNCTIONS
  */

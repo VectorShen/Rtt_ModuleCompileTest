@@ -91,6 +91,13 @@ extern int amessage_main (void);
 #endif /* RT_USING_PROTOBUF_C_TEST */
 #endif /* RT_USING_PROTOBUF_C */
 
+#ifdef RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY
+#ifdef RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY_VERSION_QUERY
+extern char* version_query_argvs[2];
+extern int version_query_main (int argc, char *argv[]);
+#endif /* RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY_VERSION_QUERY */
+#endif /* RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY */
+
 void rt_init_thread_entry(void* parameter)
 {
 #ifdef RT_USING_COMPONENTS_INIT
@@ -115,6 +122,12 @@ void rt_init_thread_entry(void* parameter)
     else
         rt_kprintf("File System initialzation failed!\n");
 #endif  /* RT_USING_DFS */
+
+#ifdef RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY
+#ifdef RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY_VERSION_QUERY
+	version_query_main (2, version_query_argvs);
+#endif /* RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY_VERSION_QUERY */
+#endif /* RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY */
 
 #ifdef RT_USING_RTGUI
     {
