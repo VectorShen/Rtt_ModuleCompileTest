@@ -1,0 +1,19 @@
+# for wireless-zigbee-ti related component
+import os
+Import('RTT_ROOT')
+from building import *
+
+objs = []
+cwd = GetCurrentDir()
+list = os.listdir(cwd)
+
+# the default ti zigbee working mode is gateway
+if not GetDepend('RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY') and not GetDepend('RT_USING_WIRELESS_ZIGBEE_TI_NODE'):
+    AddDepend('RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY')
+
+for item in list:
+    path = os.path.join(cwd, item)
+    if os.path.isfile(os.path.join(cwd, item, 'SConscript')):
+        objs = objs + SConscript(os.path.join(item, 'SConscript'))
+
+Return('objs')

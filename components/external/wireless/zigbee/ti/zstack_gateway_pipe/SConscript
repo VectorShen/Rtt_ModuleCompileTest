@@ -1,0 +1,85 @@
+from building import *
+
+src = []
+path = [GetCurrentDir()]
+define = []
+
+version_query_src = Glob("Source/Projects/zstack/linux/version_query_minitool/Source/*.c")
+version_query_path = [GetCurrentDir() + '/Source/Projects/zstack/linux/version_query_minitool/Source']
+version_query_define = ['_GNU_SOURCE', 'xHAL_UART_SPI']
+
+npi_src = Split("""
+Source/Projects/tools/LinuxHost/ipclib/server/hal_gpio.c
+Source/Projects/tools/LinuxHost/ipclib/server/npi_lnx_ipc.c
+""")
+
+npi_path = [GetCurrentDir() + '/Source/Projects/tools/LinuxHost/ipclib/server',
+    GetCurrentDir() + '/Source/Projects/tools/LinuxHost/ipclib/common']
+npi_define = ['MRDY_EARLY_FIX', 'RNP_HOST', 'SRDY_INTERRUPT']
+
+nwkmgr_src = Split("""
+Source/Projects/zstack/linux/nwkmgr/nwkmgr.pb-c.c
+Source/Projects/zstack/linux/nwkmgr/nwkmgrdatabase.c
+Source/Projects/zstack/linux/nwkmgr/nwkmgrp2p.c
+Source/Projects/zstack/linux/nwkmgr/nwkmgrservices.c
+Source/Projects/zstack/linux/nwkmgr/nwkmgrsrv.c
+Source/Projects/zstack/linux/nwkmgr/zcl_port.c
+Source/Projects/zstack/linux/srvwrapper/configparser.c
+Source/Projects/zstack/linux/srvwrapper/main.c
+Source/Projects/zstack/linux/srvwrapper/trace.c
+Source/Projects/zstack/linux/sdb/SimpleDB.c
+Source/Projects/zstack/linux/sdb/SimpleDBTxt.c
+Source/Projects/zstack/linux/srvepconfig/serverep.c
+Source/Projects/zstack/linux/srvepconfig/serverdefep.c
+Source/Projects/zstack/linux/zstackpb/zstack.pb-c.c
+Source/Projects/zstack/linux/serverpb/server.pb-c.c
+Source/Components/stack/zcl/zcl_general.c
+Source/Components/stack/zcl/zcl.c
+Source/Projects/zstack/linux/srvwrapper/api_client.c
+Source/Projects/zstack/linux/srvwrapper/api_server.c
+""")
+
+nwkmgr_path = [GetCurrentDir() + '/Source/Components/stack/zcl',
+    GetCurrentDir() + '/Source/Projects/zstack/linux/zstackpb',
+    GetCurrentDir() + '/Source/Projects/zstack/linux/hal',
+    GetCurrentDir() + '/Source/Projects/zstack/linux/nwkmgr',
+    GetCurrentDir() + '/Source/Projects/zstack/linux/serverpb',
+    GetCurrentDir() + '/Source/Projects/zstack/linux/srvepconfig',
+    GetCurrentDir() + '/Source/Projects/zstack/linux/sdb',
+    GetCurrentDir() + '/Source/Projects/zstack/linux/srvwrapper',
+    GetCurrentDir() + '/Source/Projects/zstack/linux/hagateway',
+    GetCurrentDir() + '/Source/Projects/zstack/linux/linux_osal/include',
+    GetCurrentDir() + '/Source/Projects/zstack/linux/zmac']
+
+nwkmgr_define = ['D_GNU_SOURCE', '__USE_UNIX98', 'NWKMGR_SRVR', 'ZG_SECURE_ENABLED', 'MAX_BINDING_CLUSTER_IDS', 'ZCL_ON_OFF', 'ZCL_STANDALONE', 'SERVER_NAME=NWK_MGR']
+
+if GetDepend(['RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY_VERSION_QUERY']):
+    src += version_query_src
+    path += version_query_path
+    define += version_query_define
+
+if GetDepend(['RT_USING_ZIGBEE_TI_GATEWAY_NPI_UART']):
+    src += ['Source/Projects/tools/LinuxHost/ipclib/server/npi_lnx_uart.c']
+    npi_define += ['NPI_UART=TRUE']
+
+if GetDepend(['RT_USING_ZIGBEE_TI_GATEWAY_NPI_SPI']):
+    src += ['Source/Projects/tools/LinuxHost/ipclib/server/npi_lnx_spi.c', 'Source/Projects/tools/LinuxHost/ipclib/server/hal_spi.c']
+    npi_define += ['NPI_SPI=TRUE']
+
+if GetDepend(['RT_USING_ZIGBEE_TI_GATEWAY_NPI_I2C']):
+    src += ['Source/Projects/tools/LinuxHost/ipclib/server/npi_lnx_i2c.c', 'Source/Projects/tools/LinuxHost/ipclib/server/hal_i2c.c']
+    npi_define += ['NPI_I2C=TRUE']
+
+if GetDepend(['RT_USING_ZIGBEE_TI_GATEWAY_NPI']):
+    src += npi_src
+    path += npi_path + [GetCurrentDir() + '/../../../../../libc/pthreads']
+    define += npi_define
+
+if GetDepend(['RT_USING_ZIGBEE_TI_GATEWAY_NWKMGR']):
+    src += nwkmgr_src
+    path += nwkmgr_path
+    define += nwkmgr_define
+
+group = DefineGroup('zigbee', src, depend = ['RT_USING_WIRELESS_ZIGBEE', 'RT_USING_WIRELESS_ZIGBEE_TI', 'RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY'], CPPPATH = path, CPPDEFINES=define)
+
+Return('group')

@@ -1,0 +1,19 @@
+# for wireless-zigbee related component
+import os
+Import('RTT_ROOT')
+from building import *
+
+objs = []
+cwd = GetCurrentDir()
+list = os.listdir(cwd)
+
+# the default zigbee vendor is TI
+if not GetDepend('RT_USING_WIRELESS_ZIGBEE_TI') and not GetDepend('RT_USING_WIRELESS_ZIGBEE_NXP') and not GetDepend('RT_USING_WIRELESS_SILICON'):
+    AddDepend('RT_USING_WIRELESS_ZIGBEE_TI')
+
+for d in list:
+    path = os.path.join(cwd, d)
+    if os.path.isfile(os.path.join(path, 'SConscript')):
+        objs = objs + SConscript(os.path.join(d, 'SConscript'))
+
+Return('objs')
