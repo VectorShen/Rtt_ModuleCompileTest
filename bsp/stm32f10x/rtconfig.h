@@ -91,7 +91,7 @@
 #define RT_USING_COMPONENTS_DRIVERS_PIPE
 #ifdef RT_USING_COMPONENTS_DRIVERS_PIPE
 #define RT_PIPE_BUFSZ 128
-#define RT_USING_COMPONENTS_DRIVERS_PIPE_TEST
+//#define RT_USING_COMPONENTS_DRIVERS_PIPE_TEST
 #endif /* RT_USING_COMPONENTS_DRIVERS_PIPE */
 
 /* RT_USING_COMPONENTS_INIT is not set */
@@ -156,8 +156,12 @@
 
 #define RT_USING_DEVICE_IPC
 #define RT_USING_SERIAL
-#define RT_USING_CAN
+
+//#define RT_USING_CAN
+#ifdef RT_USING_CAN
 #define RT_CAN_USING_HDR
+#endif
+
 /* RT_USING_HWTIMER is not set */
 /* RT_USING_CPUTIME is not set */
 /* RT_USING_I2C is not set */
@@ -282,7 +286,7 @@
 #define SOC_STM32F1
 #define RT_USING_UART1
 #define RT_USING_UART2
-#define RT_USING_UART3
+//#define RT_USING_UART3
 /* RT_USING_UART4 is not set */
 
 #endif
