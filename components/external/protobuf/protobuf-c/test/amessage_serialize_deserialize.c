@@ -28,12 +28,11 @@ int amessage_main (void)
   	}
   
   	// display the message's fields.
-  	rt_kprintf("Received: a=%d",msg_ptr->a);  // required field
+  	rt_kprintf("Received: a=%d\n",msg_ptr->a);  // required field
     if (msg_ptr->has_b)                   // handle optional field
     {
-  		rt_kprintf("  b=%d",msg_ptr->b);
+  		rt_kprintf("  b=%d\n",msg_ptr->b);
     }
-    rt_kprintf("\n");
   
 	free (buf);					// Free the allocated serialized buffer
 	return 0;
