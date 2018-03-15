@@ -182,6 +182,7 @@
 #define RT_USING_POSIX
 /* RT_USING_POSIX_MMAP is not set */
 /* RT_USING_POSIX_TERMIOS is not set */
+#define RT_USING_POSIX_TERMIOS
 /* RT_USING_POSIX_AIO is not set */
 /* HAVE_SYS_SIGNALS is not set */
 

@@ -1,7 +1,7 @@
 from building import *
 
 src = []
-path = [GetCurrentDir()]
+path = [GetCurrentDir() + '/../../../../../../components/drivers/include/ipc']
 define = []
 
 version_query_src = Glob("Source/Projects/zstack/linux/version_query_minitool/Source/*.c")

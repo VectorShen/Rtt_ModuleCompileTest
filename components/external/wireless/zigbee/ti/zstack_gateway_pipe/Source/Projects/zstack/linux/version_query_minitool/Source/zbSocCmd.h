@@ -49,6 +49,10 @@ extern "C"
  */
 #include <stdint.h>
 #include <stdbool.h>
+#include <rtthread.h>
+
+#undef printf
+#define printf rt_kprintf
 
 /*********************************************************************
  * CONSTANTS

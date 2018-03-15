@@ -45,8 +45,10 @@
 #include <poll.h>
 #include <time.h>
 #include <unistd.h>
-#include <sys/timerfd.h>
+//#include <sys/timerfd.h>
 #include <termios.h>
+
+#include "dfs_poll.h"
 
 #include "zbSocCmd.h"
 #include "zbSocTransportUart.h"
@@ -72,7 +74,7 @@ struct termios old_tio;
 /*********************************************************************
  * FUNCTIONS
  */
-int main (int argc, char *argv[])
+int version_query_main (int argc, char *argv[])
 {
 	char *selected_serial_port;
 

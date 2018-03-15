@@ -52,7 +52,6 @@
 #include <string.h>
 #include <signal.h>
 #include <time.h>
-#include <sys/timerfd.h>
 #include <stdbool.h>
 
 #include "zbSocCmd.h"

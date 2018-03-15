@@ -48,6 +48,10 @@ extern "C"
  * INCLUDES
  */
 #include <stdint.h>
+#include <rtthread.h>
+
+#undef printf
+#define printf rt_kprintf
 
 /*********************************************************************
  * EXTERNAL VARIABLES

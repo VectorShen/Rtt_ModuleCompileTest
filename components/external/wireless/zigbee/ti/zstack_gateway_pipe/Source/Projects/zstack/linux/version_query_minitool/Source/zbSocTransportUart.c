@@ -51,6 +51,7 @@
 #include <string.h>
 
 #include "zbSocCmd.h"
+#include "dfs_posix.h"
 
 /*********************************************************************
  * MACROS
