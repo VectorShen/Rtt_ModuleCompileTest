@@ -193,6 +193,23 @@ int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)
 
 #define    SIGIO   23                              /* input/output possible signal */
 #define    SIGPOLL SIGIO                   /* System V name for SIGIO */
+
+typedef unsigned long sigset_t;
+typedef void (*_sig_func_ptr)(int);
+
+struct sigaction
+{
+	_sig_func_ptr sa_handler;
+	sigset_t sa_mask;
+	int sa_flags;
+};
+
+#define sigaddset(what,sig) (*(what) |= (1<<(sig)), 0)
+#define sigdelset(what,sig) (*(what) &= ~(1<<(sig)), 0)
+#define sigemptyset(what)   (*(what) = 0, 0)
+#define sigfillset(what)    (*(what) = ~(0), 0)
+#define sigismember(what,sig) (((*(what)) & (1<<(sig))) != 0)
+
 #endif
 
 #ifdef __cplusplus
