@@ -130,6 +130,7 @@ void rt_hw_exception_install(rt_err_t (*exception_handle)(void *context));
  * delay interfaces
  */
 void rt_hw_us_delay(rt_uint32_t us);
+#define usleep(x)	rt_hw_us_delay(x)
 
 #ifdef __cplusplus
 }
