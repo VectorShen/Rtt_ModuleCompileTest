@@ -43,9 +43,14 @@
 
 /* PC */
 #include <rtthread.h>
+#include <rthw.h>
 #include <dfs_posix.h>
 #include <dfs_poll.h>
 #include <sys/unistd.h>
+
+#undef printf
+#define printf 	rt_kprintf
+#define perror 	rt_kprintf
 /* ------------------------------------------------------------------------------------------------
  *                                               Types
  * ------------------------------------------------------------------------------------------------
