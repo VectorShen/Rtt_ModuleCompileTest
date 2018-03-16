@@ -1,7 +1,9 @@
 from building import *
 
 src = []
-path = [GetCurrentDir() + '/../../../../../../components/drivers/include/ipc']
+path = [GetCurrentDir() + '/../../../../../../components/drivers/include/ipc',
+    GetCurrentDir() + '/Source/Projects/zstack/linux/include']
+
 define = []
 
 version_query_src = Glob("Source/Projects/zstack/linux/version_query_minitool/Source/*.c")
@@ -58,21 +60,21 @@ if GetDepend(['RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY_VERSION_QUERY']):
     path += version_query_path
     define += version_query_define
 
-if GetDepend(['RT_USING_ZIGBEE_TI_GATEWAY_NPI_UART']):
+if GetDepend(['RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY_NPI_IPC_UART']):
     src += ['Source/Projects/tools/LinuxHost/ipclib/server/npi_lnx_uart.c']
     npi_define += ['NPI_UART=TRUE']
 
-if GetDepend(['RT_USING_ZIGBEE_TI_GATEWAY_NPI_SPI']):
+if GetDepend(['RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY_NPI_IPC_SPI']):
     src += ['Source/Projects/tools/LinuxHost/ipclib/server/npi_lnx_spi.c', 'Source/Projects/tools/LinuxHost/ipclib/server/hal_spi.c']
     npi_define += ['NPI_SPI=TRUE']
 
-if GetDepend(['RT_USING_ZIGBEE_TI_GATEWAY_NPI_I2C']):
+if GetDepend(['RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY_NPI_IPC_I2C']):
     src += ['Source/Projects/tools/LinuxHost/ipclib/server/npi_lnx_i2c.c', 'Source/Projects/tools/LinuxHost/ipclib/server/hal_i2c.c']
     npi_define += ['NPI_I2C=TRUE']
 
-if GetDepend(['RT_USING_ZIGBEE_TI_GATEWAY_NPI']):
+if GetDepend(['RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY_NPI_IPC']):
     src += npi_src
-    path += npi_path + [GetCurrentDir() + '/../../../../../libc/pthreads']
+    path += npi_path + [GetCurrentDir() + '/../../../../../../libc/pthreads']
     define += npi_define
 
 if GetDepend(['RT_USING_ZIGBEE_TI_GATEWAY_NWKMGR']):

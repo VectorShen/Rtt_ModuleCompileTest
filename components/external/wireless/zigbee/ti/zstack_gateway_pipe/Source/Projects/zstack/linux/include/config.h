@@ -1,36 +1,36 @@
 #ifndef _CONFIG_H_
 #define _CONFIG_H_
 
-#define NPI_IPC_LISTEN_PIPE_SERVER2CLIENT   "/home/centos/fifos/npi_ipc_server2client"
-#define NPI_IPC_LISTEN_PIPE_CLIENT2SERVER   "/home/centos/fifos/npi_ipc_client2server"
+#define NPI_IPC_LISTEN_PIPE_SERVER2CLIENT   	"/home/centos/fifos/npi_ipc_s2c"
+#define NPI_IPC_LISTEN_PIPE_CLIENT2SERVER   	"/home/centos/fifos/npi_ipc_c2s"
 
-#define NPI_IPC_LISTEN_PIPE_CHECK_STRING    "connect_to_npi_ipc"
+#define NPI_IPC_LISTEN_PIPE_CHECK_STRING    	"connect_to_npi_ipc"
 
-#define ZLSZNP_LISTEN_PIPE_SERVER2CLIENT    "/home/centos/fifos/zlsznp_server2client"
-#define ZLSZNP_LISTEN_PIPE_CLIENT2SERVER    "/home/centos/fifos/zlsznp_client2server"
+#define ZLSZNP_LISTEN_PIPE_SERVER2CLIENT    	"/home/centos/fifos/zlsznp_s2c"
+#define ZLSZNP_LISTEN_PIPE_CLIENT2SERVER    	"/home/centos/fifos/zlsznp_c2s"
 
-#define ZLSZNP_LISTEN_PIPE_CHECK_STRING     "connect_to_zlsznp"
+#define ZLSZNP_LISTEN_PIPE_CHECK_STRING     	"connect_to_zlsznp"
 
-#define NWKMGR_LISTEN_PIPE_SERVER2CLIENT    "/home/centos/fifos/nwkmgr_server2client"
-#define NWKMGR_LISTEN_PIPE_CLIENT2SERVER    "/home/centos/fifos/nwkmgr_client2server"
+#define NWKMGR_LISTEN_PIPE_SERVER2CLIENT    	"/home/centos/fifos/nwkmgr_s2c"
+#define NWKMGR_LISTEN_PIPE_CLIENT2SERVER    	"/home/centos/fifos/nwkmgr_c2s"
 
-#define NWKMGR_LISTEN_PIPE_CHECK_STRING     "connect_to_nwkmgr"
+#define NWKMGR_LISTEN_PIPE_CHECK_STRING     	"connect_to_nwkmgr"
 
-#define OTASERVER_LISTEN_PIPE_SERVER2CLIENT "/home/centos/fifos/otaserver_server2client"
-#define OTASERVER_LISTEN_PIPE_CLIENT2SERVER "/home/centos/fifos/otaserver_client2server"
+#define OTASERVER_LISTEN_PIPE_SERVER2CLIENT 	"/home/centos/fifos/otaserver_s2c"
+#define OTASERVER_LISTEN_PIPE_CLIENT2SERVER 	"/home/centos/fifos/otaserver_c2s"
 
-#define OTASERVER_LISTEN_PIPE_CHECK_STRING  "connect_to_otaserver"
+#define OTASERVER_LISTEN_PIPE_CHECK_STRING  	"connect_to_otaserver"
 
-#define GATEWAY_LISTEN_PIPE_SERVER2CLIENT   "/home/centos/fifos/gateway_server2client"
-#define GATEWAY_LISTEN_PIPE_CLIENT2SERVER   "/home/centos/fifos/gateway_client2server"
+#define GATEWAY_LISTEN_PIPE_SERVER2CLIENT   	"/home/centos/fifos/gateway_s2c"
+#define GATEWAY_LISTEN_PIPE_CLIENT2SERVER   	"/home/centos/fifos/gateway_c2s"
 
-#define GATEWAY_LISTEN_PIPE_CHECK_STRING    "connect_to_gateway"
+#define GATEWAY_LISTEN_PIPE_CHECK_STRING    	"connect_to_gateway"
 
-#define SERVER_NPI_IPC                      "srv_npi_ipc"
-#define SERVER_ZLSZNP                       "srv_zlsznp"
-#define SERVER_NWKMGR                       "srv_nwkmgr"
-#define SERVER_OTASERVER                    "srv_otaserver"
-#define SERVER_GATEWAY                      "srv_gateway"
+#define SERVER_NPI_IPC                      	"srv_npi_ipc"
+#define SERVER_ZLSZNP                       	"srv_zlsznp"
+#define SERVER_NWKMGR                       	"srv_nwkmgr"
+#define SERVER_OTASERVER                    	"srv_otaserver"
+#define SERVER_GATEWAY                      	"srv_gateway"
 
 #define TMP_PIPE_NAME_SIZE				        50
 #define TMP_ASSIGNED_ID_STRING_LEN              3

@@ -49,7 +49,7 @@
 #include <getopt.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
-#include <linux/types.h>
+//#include <linux/types.h>
 #include <sys/poll.h>
 
 #include "pthread.h"

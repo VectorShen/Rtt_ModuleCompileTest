@@ -30,6 +30,8 @@
 extern "C" {
 #endif
 
+#include <rtthread.h>
+
 #ifndef HAVE_SYS_SIGNALS
 /*  Signal Generation and Delivery, P1003.1b-1993, p. 63
     NOTE: P1003.1c/D10, p. 34 adds sigev_notify_function and
@@ -186,6 +188,11 @@ struct sigaction
 
 int sigprocmask (int how, const sigset_t *set, sigset_t *oset);
 int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact);
+
+#elif defined(__GNUC__)
+
+#define    SIGIO   23                              /* input/output possible signal */
+#define    SIGPOLL SIGIO                   /* System V name for SIGIO */
 #endif
 
 #ifdef __cplusplus

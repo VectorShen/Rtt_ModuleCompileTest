@@ -57,7 +57,6 @@
 
 // For stress testing data dump
 #include <fcntl.h>
-#include <sys/stat.h>
 #include <time.h>
 
 #include <sys/time.h>
@@ -273,7 +272,7 @@ fd_set activePipesFDs;
 int fdmax;
 struct
 {
-	//存储读写pipe
+	//瀛樺偍璇诲啓pipe
 	int list[NPI_SERVER_PIPE_QUEUE_SIZE][2];
 	int size;
 } activePipes;
@@ -902,7 +901,7 @@ int main(int argc, char ** argv)
 	 * a socket and begin listening.
 	 **********************************************************************/
 
-	//打开（创建）监听管道的读描述符并加入select机制。
+	//鎵撳紑锛堝垱寤猴級鐩戝惉绠￠亾鐨勮鎻忚堪绗﹀苟鍔犲叆select鏈哄埗銆�
 	//mkfifo and open pipes
 	if ((mkfifo (NPI_IPC_LISTEN_PIPE_CLIENT2SERVER, O_CREAT | O_EXCL) < 0) && (errno != EEXIST))
 	{
@@ -913,7 +912,7 @@ int main(int argc, char ** argv)
 		printf ("cannot create fifo %s\n", NPI_IPC_LISTEN_PIPE_SERVER2CLIENT);
 	}
 
-	//非阻塞打开读管道，写管道的打开要等读管道接收到数据再操作
+	//闈為樆濉炴墦寮�璇荤閬擄紝鍐欑閬撶殑鎵撳紑瑕佺瓑璇荤閬撴帴鏀跺埌鏁版嵁鍐嶆搷浣�
 	listenPipeReadHndl = open (NPI_IPC_LISTEN_PIPE_CLIENT2SERVER, O_RDONLY | O_NONBLOCK, 0);
 	if (listenPipeReadHndl == -1)
 	{
@@ -965,7 +964,7 @@ int main(int argc, char ** argv)
 			{
 				if (c == listenPipeReadHndl)
 				{
-                    //接收客户端管道的数据
+                    //鎺ユ敹瀹㈡埛绔閬撶殑鏁版嵁
                     n = read (listenPipeReadHndl, listen_buf, SERVER_LISTEN_BUF_SIZE);
                     if (n <= 0)
                     {
@@ -1005,8 +1004,8 @@ int main(int argc, char ** argv)
                         printf("read %d bytes from listenPipeReadHndl of string is %s.\n",n,listen_buf);
                     	if (!strncmp(listen_buf, NPI_IPC_LISTEN_PIPE_CHECK_STRING, strlen(NPI_IPC_LISTEN_PIPE_CHECK_STRING)))
                     	{
-                        	//是正确的客户端管道连接数据
-                        	//打开写管道，写入数据，并打开相应编号管道的读写描述符，加入fd select的控制里
+                        	//鏄纭殑瀹㈡埛绔閬撹繛鎺ユ暟鎹�
+                        	//鎵撳紑鍐欑閬擄紝鍐欏叆鏁版嵁锛屽苟鎵撳紑鐩稿簲缂栧彿绠￠亾鐨勮鍐欐弿杩扮锛屽姞鍏d select鐨勬帶鍒堕噷
                         	listenPipeWriteHndl = open (NPI_IPC_LISTEN_PIPE_SERVER2CLIENT, O_WRONLY, 0);
                         	if (listenPipeWriteHndl == -1)
                         	{
@@ -1026,7 +1025,7 @@ int main(int argc, char ** argv)
 
                         	clientsNum++;
 
-                        	//非阻塞创建管道
+                        	//闈為樆濉炲垱寤虹閬�
                         	if ((mkfifo (tmpReadPipeName, O_CREAT | O_EXCL) < 0) && (errno != EEXIST))
                         	{
                             	printf ("cannot create fifo %s\n", tmpReadPipeName);
@@ -1035,7 +1034,7 @@ int main(int argc, char ** argv)
                         	{
                             	printf ("cannot create fifo %s\n", tmpWritePipeName);
                         	}
-                        	//非阻塞打开读管道
+                        	//闈為樆濉炴墦寮�璇荤閬�
                         	tmpReadPipe = open (tmpReadPipeName, O_RDONLY | O_NONBLOCK, 0);
                         	if (tmpReadPipe == -1)
                         	{
@@ -1044,10 +1043,10 @@ int main(int argc, char ** argv)
                             	break;
                         	}
 
-                        	//写入管道
+                        	//鍐欏叆绠￠亾
 							write(listenPipeWriteHndl, assignedId, strlen(assignedId));
 
-                        	//阻塞打开写管道
+                        	//闃诲鎵撳紑鍐欑閬�
                         	tmpWritePipe = open (tmpWritePipeName, O_WRONLY, 0);
                         	if (tmpWritePipe == -1)
                         	{
@@ -1055,7 +1054,7 @@ int main(int argc, char ** argv)
                             	ret = NPI_LNX_FAILURE;
                             	break;
                        	 	}
-                        	//读写管道描述符加入到activelist中
+                        	//璇诲啓绠￠亾鎻忚堪绗﹀姞鍏ュ埌activelist涓�
                         	ret = addToActiveList (tmpReadPipe, tmpWritePipe);
                         	if (ret == NPI_LNX_FAILURE)
                        	 	{
@@ -1073,7 +1072,7 @@ int main(int argc, char ** argv)
                                 	fdmax = tmpReadPipe;
                             	}
                         	}
-                        	//关闭监听时的写管道
+                        	//鍏抽棴鐩戝惉鏃剁殑鍐欑閬�
                         	close (listenPipeWriteHndl);
 							#ifdef __DEBUG_TIME__
                         	if (__DEBUG_TIME_ACTIVE == TRUE)
@@ -1085,7 +1084,7 @@ int main(int argc, char ** argv)
                     	}
                     	else
                     	{
-                        	//其他数据包，暂时先打印
+                        	//鍏朵粬鏁版嵁鍖咃紝鏆傛椂鍏堟墦鍗�
                         	printf("Other msg written to npi_lnx_ipc read pipe.\n");
                     	}
 					}
@@ -1570,7 +1569,7 @@ int NPI_LNX_IPC_ConnectionHandle(int readPipe)
 
 				//			pthread_mutex_lock(&npiSyncRespLock);
 				// Send bytes
-                //寻找writePipe
+                //瀵绘壘writePipe
                 writePipe = searchWritePipeFromActiveList(readPipe);
 				ret = NPI_LNX_IPC_SendData(n, writePipe);
 			}
@@ -2105,7 +2104,7 @@ void NPI_LNX_IPC_Exit(int ret)
 	}
 }
 
-//发送底层接口的错误数据包给网络，目前统一发给监听管道。
+//鍙戦�佸簳灞傛帴鍙ｇ殑閿欒鏁版嵁鍖呯粰缃戠粶锛岀洰鍓嶇粺涓�鍙戠粰鐩戝惉绠￠亾銆�
 /**************************************************************************************************
  * @fn          NPI_LNX_IPC_NotifyError
  *
@@ -2133,7 +2132,7 @@ int NPI_LNX_IPC_NotifyError(uint16 source, const char* errorMsg)
 	 * Connect to the NPI server
 	 **********************************************************************/
 
-    //打开监听管道端口，发送数据
+    //鎵撳紑鐩戝惉绠￠亾绔彛锛屽彂閫佹暟鎹�
     tmpWritePipe = open(NPI_IPC_LISTEN_PIPE_CLIENT2SERVER, O_WRONLY, 0);
     if(tmpWritePipe == -1)
     {
