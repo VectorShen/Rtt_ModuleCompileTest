@@ -143,6 +143,7 @@
 
 #define RT_USING_LIBC
 /* RT_USING_PTHREADS is not set */
+#define RT_USING_PTHREADS
 #define RT_USING_POSIX
 /* RT_USING_POSIX_MMAP is not set */
 /* RT_USING_POSIX_TERMIOS is not set */
@@ -172,6 +173,17 @@
 
 /* RT_USING_CMSIS_OS is not set */
 #define RT_USING_RTT_CMSIS
+
+/* RT-Thread Examples */
+//#define RT_USING_EXAMPLES_LIBC
+#ifdef RT_USING_EXAMPLES_LIBC
+#define RT_USING_EXAMPLES_LIBC_TERMIOS
+#ifdef RT_USING_EXAMPLES_LIBC_TERMIOS
+#ifndef RT_USING_POSIX_TERMIOS
+#define RT_USING_POSIX_TERMIOS
+#endif /* RT_USING_POSIX_TERMIOS */
+#endif /* RT_USING_EXAMPLES_LIBC_TERMIOS */
+#endif /* RT_USING_EXAMPLES_LIBC */
 
 /* RT-Thread online packages */
 
