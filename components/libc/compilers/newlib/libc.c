@@ -35,7 +35,7 @@
 #include <pthread.h>
 #endif
 
-#if 0
+#if 1
 struct dfs_fd* dfs_stdin  = RT_NULL;
 struct dfs_fd* dfs_stdout = RT_NULL;
 struct dfs_fd* dfs_stderr = RT_NULL;
@@ -69,13 +69,13 @@ int libc_system_init(void)
 }
 INIT_COMPONENT_EXPORT(libc_system_init);
 
-#if 0
+#if 1
 //增加的一些文件操作
-FILE * rtt_fopen(const char * path, const char * mode)
+RTT_FILE * rtt_fopen(const char * path, const char * mode)
 {
   	int flags = 0;
     int fd, result;
-	FILE *d = RT_NULL;
+	RTT_FILE *d = RT_NULL;
  	RT_ASSERT(mode!=RT_NULL);
 	if(!rt_strcmp(mode,C_FILE_O_TEXT_EXIST_FILE_FOR_RDONLY))
 	{
@@ -174,7 +174,7 @@ FILE * rtt_fopen(const char * path, const char * mode)
     return d;
 }
 
-char *rtt_fgets(char *buf, int bufsize, FILE *stream)
+char *rtt_fgets(char *buf, int bufsize, RTT_FILE *stream)
 {
   	int readCounter = 0;
     int result;
@@ -209,7 +209,7 @@ char *rtt_fgets(char *buf, int bufsize, FILE *stream)
     return buf;
 }
 
-int rtt_fclose( FILE *fp )
+int rtt_fclose( RTT_FILE *fp )
 {
     int result;
 
@@ -231,7 +231,7 @@ int rtt_fclose( FILE *fp )
     return 0;
 }
 
-int rtt_fflush(FILE *stream)
+int rtt_fflush(RTT_FILE *stream)
 {
     int ret;
 
@@ -246,7 +246,7 @@ int rtt_fflush(FILE *stream)
     return ret;
 }
 
-size_t rtt_fread ( void *buffer, size_t size, size_t count, FILE *stream)
+size_t rtt_fread ( void *buffer, size_t size, size_t count, RTT_FILE *stream)
 {
     int result;
 
@@ -268,7 +268,7 @@ size_t rtt_fread ( void *buffer, size_t size, size_t count, FILE *stream)
     return result;
 }
 
-size_t rtt_fwrite(const void* buffer, size_t size, size_t count, FILE* stream)
+size_t rtt_fwrite(const void* buffer, size_t size, size_t count, RTT_FILE* stream)
 {
     int result;
 
@@ -290,7 +290,7 @@ size_t rtt_fwrite(const void* buffer, size_t size, size_t count, FILE* stream)
     return result;
 }
 
-int rtt_fseek(FILE *stream, long offset, int fromwhere)
+int rtt_fseek(RTT_FILE *stream, long offset, int fromwhere)
 {
     int result;
 
@@ -336,7 +336,7 @@ int rtt_fseek(FILE *stream, long offset, int fromwhere)
     return offset;
 }
 
-long rtt_ftell(FILE *stream)
+long rtt_ftell(RTT_FILE *stream)
 {
     if (stream == NULL)
     {
@@ -347,7 +347,7 @@ long rtt_ftell(FILE *stream)
 	return stream->pos;
 }
 
-void rtt_rewind(FILE *stream)
+void rtt_rewind(RTT_FILE *stream)
 {
     if (stream == NULL)
     {
@@ -357,7 +357,7 @@ void rtt_rewind(FILE *stream)
     rtt_fseek(stream, 0, SEEK_SET);
 }
 
-int rtt_fprintf(FILE* stream, char* fmt, ...)
+int rtt_fprintf(RTT_FILE* stream, char* fmt, ...)
 {
     int ret = 0;
     int ret1 = 0;
@@ -402,7 +402,7 @@ END_OF_OUTPUT:
     return ret;
 }
 
-int rtt_putc(int ch, FILE *stream)
+int rtt_putc(int ch, RTT_FILE *stream)
 {
     int result;
 
@@ -440,7 +440,7 @@ END_OF_OUTPUT:
     return 0;
 }
 
-int rtt_fputc(int ch, FILE *stream)
+int rtt_fputc(int ch, RTT_FILE *stream)
 {
     int result;
 
@@ -478,7 +478,7 @@ END_OF_OUTPUT:
     return 0;
 }
 
-int rtt_fputs(const char *s, FILE *stream)
+int rtt_fputs(const char *s, RTT_FILE *stream)
 {
     int result;
 
