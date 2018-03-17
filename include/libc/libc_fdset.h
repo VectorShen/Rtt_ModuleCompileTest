@@ -26,6 +26,7 @@
 #define LIBC_FDSET_H__
 
 #include <rtconfig.h>
+#include <sys/time.h>
 
 #if defined(RT_USING_NEWLIB) || defined(_WIN32)
 #include <sys/types.h>
