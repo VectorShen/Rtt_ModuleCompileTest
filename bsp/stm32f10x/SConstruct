@@ -10,7 +10,8 @@ else:
 sys.path = sys.path + [os.path.join(RTT_ROOT, 'tools')]
 from building import *
 
-TARGET = 'rtthread-stm32.' + rtconfig.TARGET_EXT
+TARGET_HEX = rtconfig.TARGET_RAW + rtconfig.TARGET_HEX_EXT
+TARGET = rtconfig.TARGET_RAW + rtconfig.TARGET_EXT
 
 env = Environment(tools = ['mingw'],
 	AS = rtconfig.AS, ASFLAGS = rtconfig.AFLAGS,

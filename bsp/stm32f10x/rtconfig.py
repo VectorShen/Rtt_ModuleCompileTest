@@ -40,6 +40,7 @@ BUILD = 'debug'
 
 if PLATFORM == 'gcc':
     # toolchains
+    TARGET_RAW = 'rtthread-stm32.'
     PREFIX = 'arm-none-eabi-'
     CC = PREFIX + 'gcc'
     CXX = PREFIX + 'g++'
@@ -47,6 +48,7 @@ if PLATFORM == 'gcc':
     AR = PREFIX + 'ar'
     LINK = PREFIX + 'gcc'
     TARGET_EXT = 'elf'
+    TARGET_HEX_EXT = 'hex'
     SIZE = PREFIX + 'size'
     OBJDUMP = PREFIX + 'objdump'
     OBJCPY = PREFIX + 'objcopy'
@@ -66,7 +68,7 @@ if PLATFORM == 'gcc':
     else:
         CFLAGS += ' -O2'
 
-    POST_ACTION = OBJCPY + ' -O ihex $TARGET ${TARGET}.hex\n' + SIZE + ' $TARGET \n'
+    POST_ACTION = OBJCPY + ' -O ihex $TARGET rtthread-stm32.hex \n' + SIZE + ' $TARGET \n'
 
 elif PLATFORM == 'armcc':
     # toolchains
