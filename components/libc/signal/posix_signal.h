@@ -32,7 +32,8 @@ extern "C" {
 #include <rtthread.h>
 #include <sys/signal.h>
 
-enum rt_signal_value{
+enum rt_signal_value
+{
     SIG1 = SIGHUP,
     SIG2 = SIGINT,
     SIG3 = SIGQUIT,

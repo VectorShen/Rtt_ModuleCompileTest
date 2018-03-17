@@ -194,8 +194,46 @@ int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)
 #define    SIGIO   23                              /* input/output possible signal */
 #define    SIGPOLL SIGIO                   /* System V name for SIGIO */
 
+#define SIGHUP       1
+#define SIGINT       2
+#define SIGQUIT      3
+#define SIGILL       4
+#define SIGTRAP      5
+#define SIGABRT      6
+#define SIGEMT       7
+#define SIGFPE       8
+#define SIGKILL      9
+#define SIGBUS      10
+#define SIGSEGV     11
+#define SIGSYS      12
+#define SIGPIPE     13
+#define SIGALRM     14
+#define SIGTERM     15
+#define SIGURG      16
+#define SIGSTOP     17
+#define SIGTSTP     18
+#define SIGCONT     19
+#define SIGCHLD     20
+#define SIGTTIN     21
+#define SIGTTOU     22
+//#define SIGPOLL     23
+#define SIGWINCH    24
+#define SIGUSR1     25
+#define SIGUSR2     26
+#define SIGRTMIN    27
+#define SIGRTMAX    31
+#define NSIG        32
+
+#define SIG_SETMASK 0   /* set mask with sigprocmask() */
+#define SIG_BLOCK   1   /* set of signals to block */
+#define SIG_UNBLOCK 2   /* set of signals to, well, unblock */
+
 typedef unsigned long sigset_t;
 typedef void (*_sig_func_ptr)(int);
+
+#define SIG_DFL ((_sig_func_ptr)0)  /* Default action */
+#define SIG_IGN ((_sig_func_ptr)1)  /* Ignore action */
+#define SIG_ERR ((_sig_func_ptr)-1) /* Error return */
 
 struct sigaction
 {
@@ -209,6 +247,9 @@ struct sigaction
 #define sigemptyset(what)   (*(what) = 0, 0)
 #define sigfillset(what)    (*(what) = ~(0), 0)
 #define sigismember(what,sig) (((*(what)) & (1<<(sig))) != 0)
+
+int sigprocmask (int how, const sigset_t *set, sigset_t *oset);
+int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact);
 
 #endif
 
