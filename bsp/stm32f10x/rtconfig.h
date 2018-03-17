@@ -29,7 +29,7 @@
 #define RT_USING_MAILBOX
 #define RT_USING_MESSAGEQUEUE
 /* RT_USING_SIGNALS is not set */
-
+#define RT_USING_SIGNALS
 /* Memory Management */
 
 #define RT_USING_MEMPOOL

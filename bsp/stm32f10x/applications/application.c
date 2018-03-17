@@ -96,6 +96,10 @@ extern int amessage_main (void);
 extern char* version_query_argvs[2];
 extern int version_query_main (int argc, char *argv[]);
 #endif /* RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY_VERSION_QUERY */
+#ifdef RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY_NPI_IPC
+extern char* npi_rtt_ipc_argvs[2];
+extern int npi_rtt_ipc_main(int argc, char ** argv);
+#endif /* RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY_NPI_IPC */
 #endif /* RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY */
 
 void rt_init_thread_entry(void* parameter)
@@ -125,8 +129,11 @@ void rt_init_thread_entry(void* parameter)
 
 #ifdef RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY
 #ifdef RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY_VERSION_QUERY
-	version_query_main (2, version_query_argvs);
+	version_query_main(2, version_query_argvs);
 #endif /* RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY_VERSION_QUERY */
+#ifdef RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY_NPI_IPC
+	npi_rtt_ipc_main(2, npi_rtt_ipc_argvs);
+#endif
 #endif /* RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY */
 
 #ifdef RT_USING_RTGUI
