@@ -162,9 +162,12 @@ rt_sighandler_t rt_signal_install(int signo, rt_sighandler_t handler)
     {
         old = tid->sig_vectors[signo];
 
-        if (handler == SIG_IGN) tid->sig_vectors[signo] = RT_NULL;
-        else if (handler == SIG_DFL) tid->sig_vectors[signo] = _signal_default_handler;
-        else tid->sig_vectors[signo] = handler;
+        if (handler == SIG_IGN)
+        	tid->sig_vectors[signo] = RT_NULL;
+        else if (handler == SIG_DFL)
+        	tid->sig_vectors[signo] = _signal_default_handler;
+        else
+        	tid->sig_vectors[signo] = handler;
     }
     rt_exit_critical();
 
