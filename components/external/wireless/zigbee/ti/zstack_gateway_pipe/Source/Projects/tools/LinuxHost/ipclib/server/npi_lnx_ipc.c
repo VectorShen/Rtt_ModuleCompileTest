@@ -272,7 +272,6 @@ fd_set activePipesFDs;
 int fdmax;
 struct
 {
-	//鐎涙ê鍋嶇拠璇插晸pipe
 	int list[NPI_SERVER_PIPE_QUEUE_SIZE][2];
 	int size;
 } activePipes;
@@ -457,6 +456,9 @@ int npi_rtt_ipc_main(int argc, char ** argv)
 	int tmpReadPipe;
 	int tmpWritePipe;
     char assignedId[NPI_IPC_ASSIGNED_ID_BUF_LEN];
+
+    char npi_ipc_read_fifo_buf[FIFO_PATH_BUFFER_LEN];
+    char npi_ipc_write_fifo_buf[FIFO_PATH_BUFFER_LEN];
 	/**********************************************************************
 	 * First step is to Configure the serial interface
 	 **********************************************************************/
@@ -909,7 +911,6 @@ int npi_rtt_ipc_main(int argc, char ** argv)
 	 * a socket and begin listening.
 	 **********************************************************************/
 
-	//閹垫挸绱戦敍鍫濆灡瀵ょ尨绱氶惄鎴濇儔缁狅繝浜鹃惃鍕嚢閹诲繗鍫粭锕�鑻熼崝鐘插弳select閺堝搫鍩楅妴锟�
 	//mkfifo and open pipes
 	if ((mkfifo (NPI_IPC_LISTEN_PIPE_CLIENT2SERVER, O_CREAT | O_EXCL) < 0) && (errno != EEXIST))
 	{
@@ -920,11 +921,14 @@ int npi_rtt_ipc_main(int argc, char ** argv)
 		printf ("cannot create fifo %s\n", NPI_IPC_LISTEN_PIPE_SERVER2CLIENT);
 	}
 
-	//闂堢偤妯嗘繅鐐村ⅵ瀵拷鐠囪崵顓搁柆鎿勭礉閸愭瑧顓搁柆鎾舵畱閹垫挸绱戠憰浣虹搼鐠囪崵顓搁柆鎾村复閺�璺哄煂閺佺増宓侀崘宥嗘惙娴ｏ拷
-	listenPipeReadHndl = open (NPI_IPC_LISTEN_PIPE_CLIENT2SERVER, O_RDONLY | O_NONBLOCK, 0);
+	memset(npi_ipc_read_fifo_buf, '\0', FIFO_PATH_BUFFER_LEN);
+	strcpy(npi_ipc_read_fifo_buf, FIFO_PATH_PREFIX);
+	strcat(npi_ipc_read_fifo_buf, NPI_IPC_LISTEN_PIPE_CLIENT2SERVER);
+
+	listenPipeReadHndl = open (npi_ipc_read_fifo_buf, O_RDONLY /*| O_NONBLOCK*/, 0);
 	if (listenPipeReadHndl == -1)
 	{
-		printf ("open %s for read error\n", NPI_IPC_LISTEN_PIPE_CLIENT2SERVER);
+		printf ("open %s for read error\n", npi_ipc_read_fifo_buf);
 		exit (-1);
 	}
 
@@ -972,7 +976,6 @@ int npi_rtt_ipc_main(int argc, char ** argv)
 			{
 				if (c == listenPipeReadHndl)
 				{
-                    //閹恒儲鏁圭�广垺鍩涚粩顖滎吀闁挾娈戦弫鐗堝祦
                     n = read (listenPipeReadHndl, listen_buf, SERVER_LISTEN_BUF_SIZE);
                     if (n <= 0)
                     {
@@ -993,10 +996,10 @@ int npi_rtt_ipc_main(int argc, char ** argv)
 							//pause();
 							close(listenPipeReadHndl);
                             FD_CLR(listenPipeReadHndl, &activePipesFDs);		
-    						listenPipeReadHndl = open (NPI_IPC_LISTEN_PIPE_CLIENT2SERVER, O_RDONLY | O_NONBLOCK, 0);
+    						listenPipeReadHndl = open (npi_ipc_read_fifo_buf, O_RDONLY | O_NONBLOCK, 0);
     						if (listenPipeReadHndl == -1)
     						{
-        						printf ("open %s for read error\n", NPI_IPC_LISTEN_PIPE_CLIENT2SERVER);
+        						printf ("open %s for read error\n", npi_ipc_read_fifo_buf);
        		 					exit (-1);
 						    }
                             FD_SET (listenPipeReadHndl, &activePipesFDs);
@@ -1012,8 +1015,6 @@ int npi_rtt_ipc_main(int argc, char ** argv)
                         printf("read %d bytes from listenPipeReadHndl of string is %s.\n",n,listen_buf);
                     	if (!strncmp(listen_buf, NPI_IPC_LISTEN_PIPE_CHECK_STRING, strlen(NPI_IPC_LISTEN_PIPE_CHECK_STRING)))
                     	{
-                        	//閺勵垱顒滅涵顔炬畱鐎广垺鍩涚粩顖滎吀闁捁绻涢幒銉︽殶閹癸拷
-                        	//閹垫挸绱戦崘娆戭吀闁搫绱濋崘娆忓弳閺佺増宓侀敍灞借嫙閹垫挸绱戦惄绋跨安缂傛牕褰跨粻锟犱壕閻ㄥ嫯顕伴崘娆愬伎鏉╂壆顑侀敍灞藉閸忣櫖d select閻ㄥ嫭甯堕崚鍫曞櫡
                         	listenPipeWriteHndl = open (NPI_IPC_LISTEN_PIPE_SERVER2CLIENT, O_WRONLY, 0);
                         	if (listenPipeWriteHndl == -1)
                         	{
@@ -1033,7 +1034,6 @@ int npi_rtt_ipc_main(int argc, char ** argv)
 
                         	clientsNum++;
 
-                        	//闂堢偤妯嗘繅鐐插灡瀵よ櫣顓搁柆锟�
                         	if ((mkfifo (tmpReadPipeName, O_CREAT | O_EXCL) < 0) && (errno != EEXIST))
                         	{
                             	printf ("cannot create fifo %s\n", tmpReadPipeName);
@@ -1042,7 +1042,7 @@ int npi_rtt_ipc_main(int argc, char ** argv)
                         	{
                             	printf ("cannot create fifo %s\n", tmpWritePipeName);
                         	}
-                        	//闂堢偤妯嗘繅鐐村ⅵ瀵拷鐠囪崵顓搁柆锟�
+
                         	tmpReadPipe = open (tmpReadPipeName, O_RDONLY | O_NONBLOCK, 0);
                         	if (tmpReadPipe == -1)
                         	{
@@ -1051,10 +1051,8 @@ int npi_rtt_ipc_main(int argc, char ** argv)
                             	break;
                         	}
 
-                        	//閸愭瑥鍙嗙粻锟犱壕
 							write(listenPipeWriteHndl, assignedId, strlen(assignedId));
 
-                        	//闂冭顢ｉ幍鎾崇磻閸愭瑧顓搁柆锟�
                         	tmpWritePipe = open (tmpWritePipeName, O_WRONLY, 0);
                         	if (tmpWritePipe == -1)
                         	{
@@ -1062,7 +1060,7 @@ int npi_rtt_ipc_main(int argc, char ** argv)
                             	ret = NPI_LNX_FAILURE;
                             	break;
                        	 	}
-                        	//鐠囪鍟撶粻锟犱壕閹诲繗鍫粭锕�濮為崗銉ュ煂activelist娑擄拷
+
                         	ret = addToActiveList (tmpReadPipe, tmpWritePipe);
                         	if (ret == NPI_LNX_FAILURE)
                        	 	{
@@ -1080,7 +1078,7 @@ int npi_rtt_ipc_main(int argc, char ** argv)
                                 	fdmax = tmpReadPipe;
                             	}
                         	}
-                        	//閸忔娊妫撮惄鎴濇儔閺冨墎娈戦崘娆戭吀闁拷
+
                         	close (listenPipeWriteHndl);
 							#ifdef __DEBUG_TIME__
                         	if (__DEBUG_TIME_ACTIVE == TRUE)
@@ -1092,7 +1090,6 @@ int npi_rtt_ipc_main(int argc, char ** argv)
                     	}
                     	else
                     	{
-                        	//閸忔湹绮弫鐗堝祦閸栧拑绱濋弳鍌涙閸忓牊澧﹂崡锟�
                         	printf("Other msg written to npi_lnx_ipc read pipe.\n");
                     	}
 					}
@@ -1577,7 +1574,6 @@ int NPI_LNX_IPC_ConnectionHandle(int readPipe)
 
 				//			pthread_mutex_lock(&npiSyncRespLock);
 				// Send bytes
-                //鐎电粯澹榳ritePipe
                 writePipe = searchWritePipeFromActiveList(readPipe);
 				ret = NPI_LNX_IPC_SendData(n, writePipe);
 			}
@@ -2112,7 +2108,6 @@ void NPI_LNX_IPC_Exit(int ret)
 	}
 }
 
-//閸欐垿锟戒礁绨崇仦鍌涘复閸欙絿娈戦柨娆掝嚖閺佺増宓侀崠鍛舶缂冩垹绮堕敍宀�娲伴崜宥囩埠娑擄拷閸欐垹绮伴惄鎴濇儔缁狅繝浜鹃妴锟�
 /**************************************************************************************************
  * @fn          NPI_LNX_IPC_NotifyError
  *

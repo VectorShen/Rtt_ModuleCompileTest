@@ -139,7 +139,7 @@
 /* RT_DFS_ELM_USE_LFN_1 is not set */
 /* RT_DFS_ELM_USE_LFN_2 is not set */
 /* RT_DFS_ELM_USE_LFN_3 is not set */
-#define RT_DFS_ELM_USE_LFN 0
+#define RT_DFS_ELM_USE_LFN 3
 #define RT_DFS_ELM_MAX_LFN 255
 #define RT_DFS_ELM_DRIVES 2
 #define RT_DFS_ELM_MAX_SECTOR_SIZE 512
