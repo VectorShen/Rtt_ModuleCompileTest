@@ -5,6 +5,9 @@
 #define STATIC_THREAD				1
 #define READ_PIPE_USE_SELECT		1
 
+#define READ_PIPE_TEST				1
+#define WRITE_PIPE_TEST				1
+
 #if READ_PIPE_USE_SELECT
 #include <dfs_select.h>
 #include <unistd.h>
@@ -40,6 +43,7 @@ static struct rt_thread write_pipe_thread;
 #if TEST_MKFIFO
 #define TEST_PIPE_NAME           	"test_pipe"
 #define PATH_OF_TEST_PIPE           "/dev/test_pipe"
+//#define PATH_OF_TEST_PIPE			"/dev/uart2"
 
 void read_pipe_thread_entry(void* arg)
 {
@@ -53,7 +57,7 @@ void read_pipe_thread_entry(void* arg)
     int timeout_cnt = 0xffffffff;
 #endif
 
-    fd=open(PATH_OF_TEST_PIPE, READ_PIPE_OPEN_FLAG_RD_ONLY, 0);
+    fd=open(PATH_OF_TEST_PIPE, READ_PIPE_OPEN_FLAG_RD_ONLY_NONBLOCK, 0);
     if(fd==-1)
     {
     	rt_kprintf("open %s for read error\n", PATH_OF_TEST_PIPE);
@@ -114,7 +118,7 @@ void read_pipe_thread_entry(void* arg)
 						close(fd);
 						FD_CLR(fd, &activePipesFDs);
 #if 1
-					    fd=open(PATH_OF_TEST_PIPE, READ_PIPE_OPEN_FLAG_RD_ONLY, 0);
+					    fd=open(PATH_OF_TEST_PIPE, READ_PIPE_OPEN_FLAG_RD_ONLY_NONBLOCK, 0);
 					    if(fd==-1)
 					    {
 					    	rt_kprintf("open %s for read error\n", PATH_OF_TEST_PIPE);
@@ -174,6 +178,7 @@ void write_pipe_thread_entry(void* arg)
         ret_size=write(fd,w_buf,strlen(w_buf));
         if(ret_size==-1)
         {
+        	rt_kprintf("pipe write return value is %d.\n", ret_size);
             if(errno==EAGAIN)
             	rt_kprintf("write to fifo error; try later\n");
         }
@@ -256,8 +261,9 @@ void rt_test_read_write_pipe(void)
 #endif
 
 #if STATIC_THREAD
+#if READ_PIPE_TEST || WRITE_PIPE_TEST
     rt_err_t result;
-
+#if READ_PIPE_TEST
     result = rt_thread_init(&read_pipe_thread,
     						READ_PIPE_THREAD_NAME,
 							read_pipe_thread_entry,
@@ -271,6 +277,8 @@ void rt_test_read_write_pipe(void)
         rt_thread_startup(&read_pipe_thread);
     }
     rt_thread_delay(3*RT_TICK_PER_SECOND);
+#endif /* READ_PIPE_TEST */
+#if WRITE_PIPE_TEST
     result = rt_thread_init(&write_pipe_thread,
     						WRITE_PIPE_THREAD_NAME,
 							write_pipe_thread_entry,
@@ -283,21 +291,27 @@ void rt_test_read_write_pipe(void)
     {
         rt_thread_startup(&write_pipe_thread);
     }
+#endif /* WRITE_PIPE_TEST */
+#endif /* READ_PIPE_TEST || WRITE_PIPE_TEST */
 #else
+#if READ_PIPE_TEST || WRITE_PIPE_TEST
     rt_thread_t pipe_write_thread;
     rt_thread_t pipe_read_thread;
+#if WRITE_PIPE_TEST
     pipe_write_thread = rt_thread_create(WRITE_PIPE_THREAD_NAME,
                                    write_pipe_thread_entry, RT_NULL,
                                    READ_WRITE_PIPE_THREAD_SIZE, 8, 10);
     if (pipe_write_thread != RT_NULL)
         rt_thread_startup(pipe_write_thread);
-
+#endif /* WRITE_PIPE_TEST */
+#if READ_PIPE_TEST
     pipe_read_thread = rt_thread_create(READ_PIPE_THREAD_NAME,
                                    read_pipe_thread_entry, RT_NULL,
                                    READ_WRITE_PIPE_THREAD_SIZE, 9, 11);
     if (pipe_read_thread != RT_NULL)
         rt_thread_startup(pipe_read_thread);
-#endif
-
+#endif /* READ_PIPE_TEST */
+#endif /* READ_PIPE_TEST || WRITE_PIPE_TEST */
+#endif /* STATIC_THREAD */
     return;                                       
 }
