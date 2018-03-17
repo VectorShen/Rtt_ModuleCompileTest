@@ -5,8 +5,6 @@
 #include <dfs_posix.h>
 #endif
 
-#if 0
-
 #include <rtconfig.h>
 #include <dfs_file.h>
 
@@ -70,22 +68,24 @@ a+b  or ab+    append; open or create binary file for update, writing at end-of-
 
 typedef struct dfs_fd RTT_FILE;
 
-#undef FILE
-#define FILE 	RTT_FILE
+//#undef FILE
+//#define FILE 	RTT_FILE
 
-FILE * rtt_fopen(const char * path, const char * mode);
-char *rtt_fgets(char *buf, int bufsize, FILE *stream);
-int rtt_fclose( FILE *fp );
-int rtt_fflush(FILE *stream);
-size_t rtt_fread ( void *buffer, size_t size, size_t count, FILE *stream);
-size_t rtt_fwrite(const void* buffer, size_t size, size_t count, FILE* stream);
-int rtt_fseek(FILE *stream, long offset, int fromwhere);
-long rtt_ftell(FILE *stream);
-void rtt_rewind(FILE *stream);
-int rtt_fprintf(FILE* stream, char* fmt, ...);
-int rtt_putc(int ch, FILE *stream);
-int rtt_fputc(int ch, FILE *stream);
-int rtt_fputs(const char *s, FILE *stream);
+RTT_FILE * rtt_fopen(const char * path, const char * mode);
+char *rtt_fgets(char *buf, int bufsize, RTT_FILE *stream);
+int rtt_fclose( RTT_FILE *fp );
+int rtt_fflush(RTT_FILE *stream);
+size_t rtt_fread ( void *buffer, size_t size, size_t count, RTT_FILE *stream);
+size_t rtt_fwrite(const void* buffer, size_t size, size_t count, RTT_FILE* stream);
+int rtt_fseek(RTT_FILE *stream, long offset, int fromwhere);
+long rtt_ftell(RTT_FILE *stream);
+void rtt_rewind(RTT_FILE *stream);
+int rtt_fprintf(RTT_FILE* stream, char* fmt, ...);
+int rtt_putc(int ch, RTT_FILE *stream);
+int rtt_fputc(int ch, RTT_FILE *stream);
+int rtt_fputs(const char *s, RTT_FILE *stream);
+
+#if 0
 
 #define fopen   rtt_fopen
 #define fgets   rtt_fgets
@@ -101,7 +101,6 @@ int rtt_fputs(const char *s, FILE *stream);
 #define fputc   rtt_fputc
 #define fputs   rtt_fputs
 
-//int setvbuf(FILE * __restrict, char *__restrict, int, size_t);
 #endif
 
 #endif

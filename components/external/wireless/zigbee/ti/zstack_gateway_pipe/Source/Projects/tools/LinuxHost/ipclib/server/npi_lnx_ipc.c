@@ -272,7 +272,7 @@ fd_set activePipesFDs;
 int fdmax;
 struct
 {
-	//瀛樺偍璇诲啓pipe
+	//鐎涙ê鍋嶇拠璇插晸pipe
 	int list[NPI_SERVER_PIPE_QUEUE_SIZE][2];
 	int size;
 } activePipes;
@@ -281,7 +281,7 @@ struct
 char npi_ipc_buf[2][sizeof(npiMsgData_t)];
 
 // Variables for Configuration
-FILE *serialCfgFd;
+RTT_FILE *serialCfgFd;
 char* pStrBufRoot;
 char* devPath;
 char* logPath;
@@ -295,7 +295,7 @@ struct timeval curTime, startTime, prevTimeSend, prevTimeRec;
 #define TIMING_STATS_SIZE                                                     500
 #define TIMING_STATS_MS_DIV                                                    10
 unsigned int timingStats[2][TIMING_STATS_SIZE + 1];
-FILE *fpStressTestData;
+RTT_FILE *fpStressTestData;
 #define STRESS_TEST_SUPPORTED_NUM_PAIRING_ENTRIES                              10
 struct
 {
@@ -330,7 +330,7 @@ char* npi_rtt_ipc_argvs[2] =
 // NPI Callback Related
 int NPI_AsynchMsgCback(npiMsgData_t *pMsg);
 
-int SerialConfigParser(FILE* serialCfgFd, const char* section,
+int SerialConfigParser(RTT_FILE* serialCfgFd, const char* section,
 		const char* key, char* resString);
 
 void NPI_LNX_IPC_Exit(int ret);
@@ -527,7 +527,7 @@ int npi_rtt_ipc_main(int argc, char ** argv)
 	}
 
 	// Open file for parsing
-	serialCfgFd = fopen(configFilePath, "r");
+	serialCfgFd = rtt_fopen(configFilePath, "r");
 	if (serialCfgFd == NULL)
 	{
 		//                            debug_
@@ -894,13 +894,13 @@ int npi_rtt_ipc_main(int argc, char ** argv)
 			close(fdStressTestData);
 	} while (done == 0);
 	// Now it's safe to open the file
-	fpStressTestData = fopen(pathName, "w");
+	fpStressTestData = rtt_fopen(pathName, "w");
 
 	time_t rawTime;
 	time(&rawTime);
-	fprintf(fpStressTestData, "*******************************************************************\n");
-	fprintf(fpStressTestData, "\nTiming Statistics file created on %s\n\n", ctime(&rawTime));
-	fprintf(fpStressTestData, "*******************************************************************\n");
+	rtt_fprintf(fpStressTestData, "*******************************************************************\n");
+	rtt_fprintf(fpStressTestData, "\nTiming Statistics file created on %s\n\n", ctime(&rawTime));
+	rtt_fprintf(fpStressTestData, "*******************************************************************\n");
 #endif //__STRESS_TEST__
 
 
@@ -909,7 +909,7 @@ int npi_rtt_ipc_main(int argc, char ** argv)
 	 * a socket and begin listening.
 	 **********************************************************************/
 
-	//鎵撳紑锛堝垱寤猴級鐩戝惉绠￠亾鐨勮鎻忚堪绗﹀苟鍔犲叆select鏈哄埗銆�
+	//閹垫挸绱戦敍鍫濆灡瀵ょ尨绱氶惄鎴濇儔缁狅繝浜鹃惃鍕嚢閹诲繗鍫粭锕�鑻熼崝鐘插弳select閺堝搫鍩楅妴锟�
 	//mkfifo and open pipes
 	if ((mkfifo (NPI_IPC_LISTEN_PIPE_CLIENT2SERVER, O_CREAT | O_EXCL) < 0) && (errno != EEXIST))
 	{
@@ -920,7 +920,7 @@ int npi_rtt_ipc_main(int argc, char ** argv)
 		printf ("cannot create fifo %s\n", NPI_IPC_LISTEN_PIPE_SERVER2CLIENT);
 	}
 
-	//闈為樆濉炴墦寮�璇荤閬擄紝鍐欑閬撶殑鎵撳紑瑕佺瓑璇荤閬撴帴鏀跺埌鏁版嵁鍐嶆搷浣�
+	//闂堢偤妯嗘繅鐐村ⅵ瀵拷鐠囪崵顓搁柆鎿勭礉閸愭瑧顓搁柆鎾舵畱閹垫挸绱戠憰浣虹搼鐠囪崵顓搁柆鎾村复閺�璺哄煂閺佺増宓侀崘宥嗘惙娴ｏ拷
 	listenPipeReadHndl = open (NPI_IPC_LISTEN_PIPE_CLIENT2SERVER, O_RDONLY | O_NONBLOCK, 0);
 	if (listenPipeReadHndl == -1)
 	{
@@ -972,7 +972,7 @@ int npi_rtt_ipc_main(int argc, char ** argv)
 			{
 				if (c == listenPipeReadHndl)
 				{
-                    //鎺ユ敹瀹㈡埛绔閬撶殑鏁版嵁
+                    //閹恒儲鏁圭�广垺鍩涚粩顖滎吀闁挾娈戦弫鐗堝祦
                     n = read (listenPipeReadHndl, listen_buf, SERVER_LISTEN_BUF_SIZE);
                     if (n <= 0)
                     {
@@ -1012,8 +1012,8 @@ int npi_rtt_ipc_main(int argc, char ** argv)
                         printf("read %d bytes from listenPipeReadHndl of string is %s.\n",n,listen_buf);
                     	if (!strncmp(listen_buf, NPI_IPC_LISTEN_PIPE_CHECK_STRING, strlen(NPI_IPC_LISTEN_PIPE_CHECK_STRING)))
                     	{
-                        	//鏄纭殑瀹㈡埛绔閬撹繛鎺ユ暟鎹�
-                        	//鎵撳紑鍐欑閬擄紝鍐欏叆鏁版嵁锛屽苟鎵撳紑鐩稿簲缂栧彿绠￠亾鐨勮鍐欐弿杩扮锛屽姞鍏d select鐨勬帶鍒堕噷
+                        	//閺勵垱顒滅涵顔炬畱鐎广垺鍩涚粩顖滎吀闁捁绻涢幒銉︽殶閹癸拷
+                        	//閹垫挸绱戦崘娆戭吀闁搫绱濋崘娆忓弳閺佺増宓侀敍灞借嫙閹垫挸绱戦惄绋跨安缂傛牕褰跨粻锟犱壕閻ㄥ嫯顕伴崘娆愬伎鏉╂壆顑侀敍灞藉閸忣櫖d select閻ㄥ嫭甯堕崚鍫曞櫡
                         	listenPipeWriteHndl = open (NPI_IPC_LISTEN_PIPE_SERVER2CLIENT, O_WRONLY, 0);
                         	if (listenPipeWriteHndl == -1)
                         	{
@@ -1033,7 +1033,7 @@ int npi_rtt_ipc_main(int argc, char ** argv)
 
                         	clientsNum++;
 
-                        	//闈為樆濉炲垱寤虹閬�
+                        	//闂堢偤妯嗘繅鐐插灡瀵よ櫣顓搁柆锟�
                         	if ((mkfifo (tmpReadPipeName, O_CREAT | O_EXCL) < 0) && (errno != EEXIST))
                         	{
                             	printf ("cannot create fifo %s\n", tmpReadPipeName);
@@ -1042,7 +1042,7 @@ int npi_rtt_ipc_main(int argc, char ** argv)
                         	{
                             	printf ("cannot create fifo %s\n", tmpWritePipeName);
                         	}
-                        	//闈為樆濉炴墦寮�璇荤閬�
+                        	//闂堢偤妯嗘繅鐐村ⅵ瀵拷鐠囪崵顓搁柆锟�
                         	tmpReadPipe = open (tmpReadPipeName, O_RDONLY | O_NONBLOCK, 0);
                         	if (tmpReadPipe == -1)
                         	{
@@ -1051,10 +1051,10 @@ int npi_rtt_ipc_main(int argc, char ** argv)
                             	break;
                         	}
 
-                        	//鍐欏叆绠￠亾
+                        	//閸愭瑥鍙嗙粻锟犱壕
 							write(listenPipeWriteHndl, assignedId, strlen(assignedId));
 
-                        	//闃诲鎵撳紑鍐欑閬�
+                        	//闂冭顢ｉ幍鎾崇磻閸愭瑧顓搁柆锟�
                         	tmpWritePipe = open (tmpWritePipeName, O_WRONLY, 0);
                         	if (tmpWritePipe == -1)
                         	{
@@ -1062,7 +1062,7 @@ int npi_rtt_ipc_main(int argc, char ** argv)
                             	ret = NPI_LNX_FAILURE;
                             	break;
                        	 	}
-                        	//璇诲啓绠￠亾鎻忚堪绗﹀姞鍏ュ埌activelist涓�
+                        	//鐠囪鍟撶粻锟犱壕閹诲繗鍫粭锕�濮為崗銉ュ煂activelist娑擄拷
                         	ret = addToActiveList (tmpReadPipe, tmpWritePipe);
                         	if (ret == NPI_LNX_FAILURE)
                        	 	{
@@ -1080,7 +1080,7 @@ int npi_rtt_ipc_main(int argc, char ** argv)
                                 	fdmax = tmpReadPipe;
                             	}
                         	}
-                        	//鍏抽棴鐩戝惉鏃剁殑鍐欑閬�
+                        	//閸忔娊妫撮惄鎴濇儔閺冨墎娈戦崘娆戭吀闁拷
                         	close (listenPipeWriteHndl);
 							#ifdef __DEBUG_TIME__
                         	if (__DEBUG_TIME_ACTIVE == TRUE)
@@ -1092,7 +1092,7 @@ int npi_rtt_ipc_main(int argc, char ** argv)
                     	}
                     	else
                     	{
-                        	//鍏朵粬鏁版嵁鍖咃紝鏆傛椂鍏堟墦鍗�
+                        	//閸忔湹绮弫鐗堝祦閸栧拑绱濋弳鍌涙閸忓牊澧﹂崡锟�
                         	printf("Other msg written to npi_lnx_ipc read pipe.\n");
                     	}
 					}
@@ -1577,7 +1577,7 @@ int NPI_LNX_IPC_ConnectionHandle(int readPipe)
 
 				//			pthread_mutex_lock(&npiSyncRespLock);
 				// Send bytes
-                //瀵绘壘writePipe
+                //鐎电粯澹榳ritePipe
                 writePipe = searchWritePipeFromActiveList(readPipe);
 				ret = NPI_LNX_IPC_SendData(n, writePipe);
 			}
@@ -1695,14 +1695,14 @@ int NPI_LNX_IPC_SendData(uint8 len, int writePipe)
 			time_t rawTime;
 			time(&rawTime);
 			printf("\nTiming Statistics as of %s:\n", ctime(&rawTime));
-			fprintf(fpStressTestData, "\nTiming Statistics as of %s:\n", ctime(&rawTime));
+			rtt_fprintf(fpStressTestData, "\nTiming Statistics as of %s:\n", ctime(&rawTime));
 			for (i = 0; i < (TIMING_STATS_SIZE / TIMING_STATS_MS_DIV); i++ )
 			{
 				printf(" %4d: \t %8d\n", i * TIMING_STATS_MS_DIV, timingStats[1][i]);
-				fprintf(fpStressTestData, " %4d: \t %8d\n", i * TIMING_STATS_MS_DIV, timingStats[1][i]);
+				rtt_fprintf(fpStressTestData, " %4d: \t %8d\n", i * TIMING_STATS_MS_DIV, timingStats[1][i]);
 			}
 			printf(" More than %u: \t %8u\n", TIMING_STATS_SIZE, timingStats[1][TIMING_STATS_SIZE]);
-			fprintf(fpStressTestData, " More than %u: \t %8u\n", TIMING_STATS_SIZE, timingStats[1][TIMING_STATS_SIZE]);
+			rtt_fprintf(fpStressTestData, " More than %u: \t %8u\n", TIMING_STATS_SIZE, timingStats[1][TIMING_STATS_SIZE]);
 
 			// Then clear statistics for next set.
 			memset(timingStats[1], 0, TIMING_STATS_SIZE + 1);
@@ -1835,7 +1835,7 @@ int NPI_LNX_IPC_SendData(uint8 len, int writePipe)
  * @return      None.
  *
  **************************************************************************************************/
-int SerialConfigParser(FILE* serialCfgFd, const char* section,
+int SerialConfigParser(RTT_FILE* serialCfgFd, const char* section,
 		const char* key, char* resultString)
 {
 	uint8 sectionFound = FALSE, invalidLineLen = FALSE;
@@ -1861,10 +1861,10 @@ int SerialConfigParser(FILE* serialCfgFd, const char* section,
 	if (serialCfgFd != NULL)
 	{
 		// Make sure we start search from the beginning of the file
-		fseek(serialCfgFd, 0, SEEK_SET);
+		rtt_fseek(serialCfgFd, 0, SEEK_SET);
 
 		// Search through the configuration file for the wanted
-		while ((resString = fgets(resString, 128, serialCfgFd)) != NULL)
+		while ((resString = rtt_fgets(resString, 128, serialCfgFd)) != NULL)
 		{
 			// Check if we have a valid line, i.e. begins with [.
 			// Note! No valid line can span more than 128 bytes. Hence we
@@ -1873,7 +1873,7 @@ int SerialConfigParser(FILE* serialCfgFd, const char* section,
 			{
 				invalidLineLen = TRUE;
 				debug_printf("Found line > 128 bytes\r");
-				fflush(stdout);
+				rtt_fflush(stdout);
 			}
 			else
 			{
@@ -1888,7 +1888,7 @@ int SerialConfigParser(FILE* serialCfgFd, const char* section,
 					resString[strlen(resString) - 1] = '\0';
 
 					debug_printf("Found line < 128 bytes\r");
-					fflush(stdout);
+					rtt_fflush(stdout);
 					if (resString[0] == '[')
 					{
 						debug_printf("Found section %s\n", resString);
@@ -2012,18 +2012,18 @@ int NPI_AsynchMsgCback(npiMsgData_t *pMsg)
 			printf("\n [ERR] Sequence Number \t (==: %d, !=: %d)\n",
 					ST_Parameters_t[1].recErrors.seqNumIdentical,
 					ST_Parameters_t[1].recErrors.errorInSeqNum);
-			fprintf(fpStressTestData, " [ERR] Sequence Number \t (==: %d, !=: %d)\n",
+			rtt_fprintf(fpStressTestData, " [ERR] Sequence Number \t (==: %d, !=: %d)\n",
 					ST_Parameters_t[1].recErrors.seqNumIdentical,
 					ST_Parameters_t[1].recErrors.errorInSeqNum);
 
 			printf("\tLast Sequence Number: (srcIdx: 0x%.2X) \t %d\n", pMsg->pData[0], ST_Parameters_t[1].currentSeqNumber[pMsg->pData[0]]);
-			fprintf(fpStressTestData, "\tLast Sequence Number: (srcIdx: 0x%.2X) \t %d\n", pMsg->pData[0], ST_Parameters_t[1].currentSeqNumber[pMsg->pData[0]]);
+			rtt_fprintf(fpStressTestData, "\tLast Sequence Number: (srcIdx: 0x%.2X) \t %d\n", pMsg->pData[0], ST_Parameters_t[1].currentSeqNumber[pMsg->pData[0]]);
 
 			printf("\tNew \040 Sequence Number: (srcIdx: 0x%.2X) \t %d", pMsg->pData[0], *incomingSeqNum);
-			fprintf(fpStressTestData, "\tNew \040 Sequence Number: (srcIdx: 0x%.2X) \t %d", pMsg->pData[0], *incomingSeqNum);
+			rtt_fprintf(fpStressTestData, "\tNew \040 Sequence Number: (srcIdx: 0x%.2X) \t %d", pMsg->pData[0], *incomingSeqNum);
 
 			printf("\n");
-			fprintf(fpStressTestData, "\n");
+			rtt_fprintf(fpStressTestData, "\n");
 		}
 
 		ST_Parameters_t[1].currentSeqNumber[pMsg->pData[0]] = *incomingSeqNum;
@@ -2060,7 +2060,7 @@ void NPI_LNX_IPC_Exit(int ret)
 	// Close file for parsing
 	if (serialCfgFd != NULL)
 	{
-		fclose(serialCfgFd);
+		rtt_fclose(serialCfgFd);
 		serialCfgFd = NULL;
 	}
 
@@ -2112,7 +2112,7 @@ void NPI_LNX_IPC_Exit(int ret)
 	}
 }
 
-//鍙戦�佸簳灞傛帴鍙ｇ殑閿欒鏁版嵁鍖呯粰缃戠粶锛岀洰鍓嶇粺涓�鍙戠粰鐩戝惉绠￠亾銆�
+//閸欐垿锟戒礁绨崇仦鍌涘复閸欙絿娈戦柨娆掝嚖閺佺増宓侀崠鍛舶缂冩垹绮堕敍宀�娲伴崜宥囩埠娑擄拷閸欐垹绮伴惄鎴濇儔缁狅繝浜鹃妴锟�
 /**************************************************************************************************
  * @fn          NPI_LNX_IPC_NotifyError
  *
@@ -2140,7 +2140,6 @@ int NPI_LNX_IPC_NotifyError(uint16 source, const char* errorMsg)
 	 * Connect to the NPI server
 	 **********************************************************************/
 
-    //鎵撳紑鐩戝惉绠￠亾绔彛锛屽彂閫佹暟鎹�
     tmpWritePipe = open(NPI_IPC_LISTEN_PIPE_CLIENT2SERVER, O_WRONLY, 0);
     if(tmpWritePipe == -1)
     {
