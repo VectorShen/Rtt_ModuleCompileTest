@@ -114,6 +114,7 @@
 
 #define MAX(a,b)								((a > b) ? a : b)
 
+#define USE_RTT_PIPE_SELECT_STD				1
 /**************************************************************************************************
  *                                           Constant
  **************************************************************************************************/
@@ -468,6 +469,14 @@ int npi_rtt_ipc_main(int argc, char ** argv)
 	char* strBuf;
 	uint8 gpioIdx = 0;
 	char* configFilePath;
+
+#if USE_RTT_PIPE_SELECT_STD
+    struct timeval t;
+    int timeout_cnt = 0xffffffff;
+    t.tv_sec = 0;
+    t.tv_usec = 100000;
+    int select_ret;
+#endif
 
 	if (argc==1)
 	{
@@ -925,35 +934,105 @@ int npi_rtt_ipc_main(int argc, char ** argv)
 	strcpy(npi_ipc_read_fifo_buf, FIFO_PATH_PREFIX);
 	strcat(npi_ipc_read_fifo_buf, NPI_IPC_LISTEN_PIPE_CLIENT2SERVER);
 
-	listenPipeReadHndl = open (npi_ipc_read_fifo_buf, O_RDONLY /*| O_NONBLOCK*/, 0);
+	listenPipeReadHndl = open (npi_ipc_read_fifo_buf, O_RDONLY | O_NONBLOCK, 0);
 	if (listenPipeReadHndl == -1)
 	{
 		printf ("open %s for read error\n", npi_ipc_read_fifo_buf);
 		exit (-1);
 	}
 
+#if !USE_RTT_PIPE_SELECT_STD
 	fd_set activePipesFDsSafeCopy;
+#endif
 
 	// Connection main loop. Cannot get here with ret != SUCCESS
 
 	char *toNpiLnxLog = (char *)malloc(AP_MAX_BUF_LEN);
 
+#if !USE_RTT_PIPE_SELECT_STD
 	// Clear file descriptor sets
 	FD_ZERO(&activePipesFDs);
 	FD_ZERO(&activePipesFDsSafeCopy);
 
 	// Add the listener to the set
 	FD_SET (listenPipeReadHndl, &activePipesFDs);
+#endif
+
 	fdmax = listenPipeReadHndl;
 
 #if (defined __DEBUG_TIME__) || (__STRESS_TEST__)
 	gettimeofday(&startTime, NULL);
 #endif // (defined __DEBUG_TIME__) || (__STRESS_TEST__)
 	//                                            debug_
+	rt_thread_delay(5*RT_TICK_PER_SECOND);
 	printf("waiting for first connection on #%d...\n", listenPipeReadHndl);
 
 	while (ret == NPI_LNX_SUCCESS)
 	{
+#if USE_RTT_PIPE_SELECT_STD
+        FD_ZERO(&activePipesFDs);
+        FD_SET (listenPipeReadHndl, &activePipesFDs);
+        // First use select to find activity on the sockets
+        if ((select_ret = select (fdmax + 1, &activePipesFDs, NULL, NULL, &t))< 0)
+        {
+            if (errno != EINTR)
+            {
+                rt_kprintf("select error\n");
+                break;
+            }
+            continue;
+        }
+        else if(select_ret == 0)
+        {
+            /* timeout */
+            timeout_cnt--;
+            if(timeout_cnt == 0)
+            {
+            	rt_kprintf("select timeout.\n");
+                break;
+            }
+        }
+        else
+        {
+			// Then process this activity
+			if (FD_ISSET(listenPipeReadHndl, &activePipesFDs))
+			{
+				//接收客户端管道的数据
+				n = read (listenPipeReadHndl, listen_buf, SERVER_LISTEN_BUF_SIZE);
+				if (n <= 0)
+				{
+					rt_kprintf("read failed for n <= 0\n");
+					if (n < 0)
+					{
+						rt_kprintf("NPI_LNX_ERROR_IPC_RECV_DATA_CHECK_ERRNO\n");
+					}
+					else
+					{
+						rt_kprintf("NPI_LNX_ERROR_IPC_RECV_DATA_DISCONNECT\n");
+						close(listenPipeReadHndl);
+						FD_CLR(listenPipeReadHndl, &activePipesFDs);
+#if 1
+						listenPipeReadHndl=open(npi_ipc_read_fifo_buf, O_RDONLY, 0);
+					    if(listenPipeReadHndl==-1)
+					    {
+					    	rt_kprintf("open %s for read error\n", npi_ipc_read_fifo_buf);
+					    }
+					    else
+					    {
+					    	rt_kprintf("open pipe for read ok.\n");
+					        fdmax = listenPipeReadHndl;
+					        rt_thread_delay(1*RT_TICK_PER_SECOND);
+					    }
+#endif
+					}
+				}
+				else
+				{
+					rt_kprintf("read some data!\n");
+				}
+			}
+        }
+#else
 		activePipesFDsSafeCopy = activePipesFDs;
 
 		// First use select to find activity on the sockets
@@ -1210,6 +1289,7 @@ int npi_rtt_ipc_main(int argc, char ** argv)
 				}
 			}
 		}
+#endif
 	}
 	free(toNpiLnxLog);
 

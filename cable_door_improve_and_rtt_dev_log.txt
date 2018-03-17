@@ -1638,3 +1638,7 @@ sqj@ubuntu:~/workspace/Embos$
         改名
 29.
     在rtt中构建管道通信时，mkfifo是管道名，打开管道时要加上/dev/前缀。
+30.
+    rtt的select机制。
+    对于管道来说，打开管道后要停顿至少3秒才能正常select。
+    
