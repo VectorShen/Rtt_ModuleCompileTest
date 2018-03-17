@@ -7,7 +7,7 @@ group = []
 
 CPPPATH = [cwd]
 #CPPDEFINES = ['RT_USING_NEWLIB']
-CPPDEFINES = ['_SYS_SELECT_H', '_SYS_STAT_H', '_SYS_ERRNO_H_', '_CTYPE_H_']
+CPPDEFINES = ['_SYS_SELECT_H', '_SYS_STAT_H', '_SYS_ERRNO_H_', '_CTYPE_H_', '_SYS__PTHREADTYPES_H_']
 
 # link with libc and libm:
 # libm is a frequently used lib. Newlib is compiled with -ffunction-sections in
