@@ -1627,3 +1627,14 @@ sqj@ubuntu:~/workspace/Embos$
 27.
     用到管道的线程，分配的线程空间要足够大。
     一般线程调度出现问题都是内存问题。
+28.
+    自定义的fopen, fclose函数与arm-none-eabi-gcc的libc.a中库文件冲突。
+    1. 
+        考虑从源头重新编译。
+    2.
+        将libc.a解压缩，然后重新打包，规避掉lib_a-fclose.o，lib_a-fflush.o等二进制包
+        失败：包的依赖过于复杂
+    3.
+        改名
+29.
+    在rtt中构建管道通信时，mkfifo是管道名，打开管道时要加上/dev/前缀。
