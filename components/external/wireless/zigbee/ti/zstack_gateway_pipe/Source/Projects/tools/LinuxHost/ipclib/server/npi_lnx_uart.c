@@ -216,7 +216,7 @@ static void *npi_rx_entry(void *ptr);
  *
  * input parameters
  *
- * @param      portName � name of the serial port
+ * @param      portName 锟� name of the serial port
  *
  * output parameters
  *
@@ -1249,7 +1249,7 @@ static void npi_installsig(void)
 	ioaction.sa_handler = npi_iohandler;
 	sigemptyset(&ioaction.sa_mask);
 	ioaction.sa_flags = 0;
-	ioaction.sa_restorer = NULL;
+	//ioaction.sa_restorer = NULL;
 	if (sigaction(SIGIO, &ioaction, NULL)) 
     {
 		perror("sigaction");

@@ -227,22 +227,22 @@ off_t lseek(int fd, off_t offset, int whence)
 
     switch (whence)
     {
-    case SEEK_SET:
-        break;
+		case SEEK_SET:
+			break;
 
-    case SEEK_CUR:
-        offset += d->pos;
-        break;
+		case SEEK_CUR:
+			offset += d->pos;
+			break;
 
-    case SEEK_END:
-        offset += d->size;
-        break;
+		case SEEK_END:
+			offset += d->size;
+			break;
 
-    default:
-        fd_put(d);
-        rt_set_errno(-EINVAL);
+		default:
+			fd_put(d);
+			rt_set_errno(-EINVAL);
 
-        return -1;
+			return -1;
     }
 
     if (offset < 0)

@@ -317,6 +317,12 @@ struct
     }
 };
 #endif //__STRESS_TEST__
+
+char* npi_rtt_ipc_argvs[2] =
+{
+	"npi_rtt_ipc_main", "/NPI_Gateway.cfg"
+};
+
 /**************************************************************************************************
  *                                     Local Function Prototypes
  **************************************************************************************************/
@@ -440,7 +446,7 @@ static void print_usage(const char *prog)
  *
  *
  **************************************************************************************************/
-int main(int argc, char ** argv)
+int npi_rtt_ipc_main(int argc, char ** argv)
 {
 	int c;
 	int n;
@@ -463,7 +469,7 @@ int main(int argc, char ** argv)
 
 	if (argc==1)
 	{
-		configFilePath = "./NPI_Gateway.cfg";
+		configFilePath = "/NPI_Gateway.cfg";
 	}
 	else if (argc==2)
 	{
@@ -579,7 +585,8 @@ int main(int argc, char ** argv)
 	// GPIO configuration
 	if ((devIdx == 1) || (devIdx == 2))
 	{
-		for (gpioIdx = 0; gpioIdx < 3; gpioIdx++) {
+		for (gpioIdx = 0; gpioIdx < 3; gpioIdx++)
+		{
 			// Get SRDY, MRDY or RESET GPIO
 			debug_printf("gpioCfg[gpioIdx]->gpio \t\t\t%p\n",
 					(void *)&(gpioCfg[gpioIdx]->gpio));
@@ -656,10 +663,11 @@ int main(int argc, char ** argv)
 			strBuf = pStrBufRoot;
 			if (NPI_LNX_SUCCESS == (SerialConfigParser(serialCfgFd,
 					sectionNamesArray[gpioIdx][1], "active_high_low",
-					strBuf))) {
-			// Copy from buffer to variable
-			gpioCfg[gpioIdx]->gpio.active_high_low = strBuf[0] - '0';
-			debug_printf("gpioCfg[%i]->gpio.active_high_low = %d\n",
+					strBuf)))
+			{
+				// Copy from buffer to variable
+				gpioCfg[gpioIdx]->gpio.active_high_low = strBuf[0] - '0';
+				debug_printf("gpioCfg[%i]->gpio.active_high_low = %d\n",
 							gpioIdx, gpioCfg[gpioIdx]->gpio.active_high_low);
 			}
 			else
@@ -674,11 +682,11 @@ int main(int argc, char ** argv)
 			if (NPI_LNX_SUCCESS == (SerialConfigParser(serialCfgFd,
 					sectionNamesArray[gpioIdx][1], "value", strBuf)))
 			{
-			// Copy from buffer to variable
-			memcpy(gpioCfg[gpioIdx]->levelshifter.value, strBuf,
-					strlen(strBuf));
-			debug_printf("gpioCfg[%i]->levelshifter.value = '%s'\n",
-						gpioIdx, gpioCfg[gpioIdx]->levelshifter.value);
+				// Copy from buffer to variable
+				memcpy(gpioCfg[gpioIdx]->levelshifter.value, strBuf,
+						strlen(strBuf));
+				debug_printf("gpioCfg[%i]->levelshifter.value = '%s'\n",
+							gpioIdx, gpioCfg[gpioIdx]->levelshifter.value);
 			}
 			else
 				printf("[CONFIG] Warning , key 'value' is missing for optional GPIO %s\n", sectionNamesArray[gpioIdx][1]);
@@ -688,11 +696,11 @@ int main(int argc, char ** argv)
 			if (NPI_LNX_SUCCESS == (SerialConfigParser(serialCfgFd,
 					sectionNamesArray[gpioIdx][1], "direction", strBuf)))
 			{
-			// Copy from buffer to variable
-			memcpy(gpioCfg[gpioIdx]->levelshifter.direction, strBuf,
-					strlen(strBuf));
-			debug_printf("gpioCfg[%i]->levelshifter.direction = '%s'\n",
-						gpioIdx, gpioCfg[gpioIdx]->levelshifter.direction);
+				// Copy from buffer to variable
+				memcpy(gpioCfg[gpioIdx]->levelshifter.direction, strBuf,
+						strlen(strBuf));
+				debug_printf("gpioCfg[%i]->levelshifter.direction = '%s'\n",
+							gpioIdx, gpioCfg[gpioIdx]->levelshifter.direction);
 			}
 			else
 				printf("[CONFIG] Warning , key 'direction' is missing for optional GPIO %s\n", sectionNamesArray[gpioIdx][1]);
@@ -703,10 +711,10 @@ int main(int argc, char ** argv)
 			if (NPI_LNX_SUCCESS == (SerialConfigParser(serialCfgFd,
 					sectionNamesArray[gpioIdx][1], "active_high_low", strBuf)))
 			{
-			// Copy from buffer to variable
-			gpioCfg[gpioIdx]->levelshifter.active_high_low = atoi(strBuf);
-			debug_printf("gpioCfg[%i]->levelshifter.active_high_low = %d\n",
-					gpioIdx, gpioCfg[gpioIdx]->levelshifter.active_high_low);
+				// Copy from buffer to variable
+				gpioCfg[gpioIdx]->levelshifter.active_high_low = atoi(strBuf);
+				debug_printf("gpioCfg[%i]->levelshifter.active_high_low = %d\n",
+						gpioIdx, gpioCfg[gpioIdx]->levelshifter.active_high_low);
 			}
 			else
 				printf("[CONFIG] Warning , key 'active_high_low' is missing for optional GPIO %s\n", sectionNamesArray[gpioIdx][1]);
@@ -744,110 +752,110 @@ int main(int argc, char ** argv)
 		}
 		#endif
 		break;
-	case NPI_SPI_FN_ARR_IDX:
-		#if (defined NPI_SPI) && (NPI_SPI == TRUE)
-		{
-			halSpiCfg_t halSpiCfg;
-			npiSpiCfg_t npiSpiCfg;
-			strBuf = pStrBufRoot;
-			if (NPI_LNX_SUCCESS == (SerialConfigParser(serialCfgFd, "SPI", "speed", strBuf)))
+		case NPI_SPI_FN_ARR_IDX:
+			#if (defined NPI_SPI) && (NPI_SPI == TRUE)
 			{
-				halSpiCfg.speed = strtol(strBuf, NULL, 10);
-			}
-			else
-			{
-				halSpiCfg.speed = 500000;
-			}
-			if (NPI_LNX_SUCCESS == (SerialConfigParser(serialCfgFd, "SPI", "mode", strBuf)))
-			{
-				halSpiCfg.mode = strtol(strBuf, NULL, 16);
-			}
-			else
-			{
-				halSpiCfg.mode = 0;
-			}
-			if (NPI_LNX_SUCCESS == (SerialConfigParser(serialCfgFd, "SPI", "bitsPerWord", strBuf)))
-			{
-				halSpiCfg.bitsPerWord = strtol(strBuf, NULL, 10);
-			}
-			else
-			{
-				halSpiCfg.bitsPerWord = 0;
-			}
-			if (NPI_LNX_SUCCESS == (SerialConfigParser(serialCfgFd, "SPI", "useFullDuplexAPI", strBuf)))
-			{
-				halSpiCfg.useFullDuplexAPI = strtol(strBuf, NULL, 10);
-			}
-			else
-			{
-				halSpiCfg.useFullDuplexAPI = TRUE;
-			}
-			if (NPI_LNX_SUCCESS == (SerialConfigParser(serialCfgFd, "SPI", "earlyMrdyDeAssert", strBuf)))
-			{
-				npiSpiCfg.earlyMrdyDeAssert = strtol(strBuf, NULL, 10);
-			}
-			else
-			{
-				// If it is not defined then set value for RNP
-				npiSpiCfg.earlyMrdyDeAssert = TRUE;
-			}
-			if (NPI_LNX_SUCCESS == (SerialConfigParser(serialCfgFd, "SPI", "detectResetFromSlowSrdyAssert", strBuf)))
-			{
-				npiSpiCfg.detectResetFromSlowSrdyAssert = strtol(strBuf, NULL, 10);
-			}
-			else
-			{
-				// If it is not defined then set value for RNP
-				npiSpiCfg.detectResetFromSlowSrdyAssert = TRUE;
-			}
-			if (NPI_LNX_SUCCESS == (SerialConfigParser(serialCfgFd, "SPI", "forceRunOnReset", strBuf)))
-			{
-				npiSpiCfg.forceRunOnReset = strtol(strBuf, NULL, 16);
-			}
-			else
-			{
-				// If it is not defined then set value for RNP
-				npiSpiCfg.forceRunOnReset = NPI_LNX_UINT8_ERROR;
-			}
-			if (NPI_LNX_SUCCESS == (SerialConfigParser(serialCfgFd, "SPI", "srdyMrdyHandshakeSupport", strBuf)))
-			{
-				npiSpiCfg.srdyMrdyHandshakeSupport = strtol(strBuf, NULL, 10);
-			}
-			else
-			{
-				// If it is not defined then set value for RNP
-				npiSpiCfg.srdyMrdyHandshakeSupport = TRUE;
-			}
+				halSpiCfg_t halSpiCfg;
+				npiSpiCfg_t npiSpiCfg;
+				strBuf = pStrBufRoot;
+				if (NPI_LNX_SUCCESS == (SerialConfigParser(serialCfgFd, "SPI", "speed", strBuf)))
+				{
+					halSpiCfg.speed = strtol(strBuf, NULL, 10);
+				}
+				else
+				{
+					halSpiCfg.speed = 500000;
+				}
+				if (NPI_LNX_SUCCESS == (SerialConfigParser(serialCfgFd, "SPI", "mode", strBuf)))
+				{
+					halSpiCfg.mode = strtol(strBuf, NULL, 16);
+				}
+				else
+				{
+					halSpiCfg.mode = 0;
+				}
+				if (NPI_LNX_SUCCESS == (SerialConfigParser(serialCfgFd, "SPI", "bitsPerWord", strBuf)))
+				{
+					halSpiCfg.bitsPerWord = strtol(strBuf, NULL, 10);
+				}
+				else
+				{
+					halSpiCfg.bitsPerWord = 0;
+				}
+				if (NPI_LNX_SUCCESS == (SerialConfigParser(serialCfgFd, "SPI", "useFullDuplexAPI", strBuf)))
+				{
+					halSpiCfg.useFullDuplexAPI = strtol(strBuf, NULL, 10);
+				}
+				else
+				{
+					halSpiCfg.useFullDuplexAPI = TRUE;
+				}
+				if (NPI_LNX_SUCCESS == (SerialConfigParser(serialCfgFd, "SPI", "earlyMrdyDeAssert", strBuf)))
+				{
+					npiSpiCfg.earlyMrdyDeAssert = strtol(strBuf, NULL, 10);
+				}
+				else
+				{
+					// If it is not defined then set value for RNP
+					npiSpiCfg.earlyMrdyDeAssert = TRUE;
+				}
+				if (NPI_LNX_SUCCESS == (SerialConfigParser(serialCfgFd, "SPI", "detectResetFromSlowSrdyAssert", strBuf)))
+				{
+					npiSpiCfg.detectResetFromSlowSrdyAssert = strtol(strBuf, NULL, 10);
+				}
+				else
+				{
+					// If it is not defined then set value for RNP
+					npiSpiCfg.detectResetFromSlowSrdyAssert = TRUE;
+				}
+				if (NPI_LNX_SUCCESS == (SerialConfigParser(serialCfgFd, "SPI", "forceRunOnReset", strBuf)))
+				{
+					npiSpiCfg.forceRunOnReset = strtol(strBuf, NULL, 16);
+				}
+				else
+				{
+					// If it is not defined then set value for RNP
+					npiSpiCfg.forceRunOnReset = NPI_LNX_UINT8_ERROR;
+				}
+				if (NPI_LNX_SUCCESS == (SerialConfigParser(serialCfgFd, "SPI", "srdyMrdyHandshakeSupport", strBuf)))
+				{
+					npiSpiCfg.srdyMrdyHandshakeSupport = strtol(strBuf, NULL, 10);
+				}
+				else
+				{
+					// If it is not defined then set value for RNP
+					npiSpiCfg.srdyMrdyHandshakeSupport = TRUE;
+				}
 
-			npiSpiCfg.spiCfg = &halSpiCfg;
-			npiSpiCfg.gpioCfg = gpioCfg;
+				npiSpiCfg.spiCfg = &halSpiCfg;
+				npiSpiCfg.gpioCfg = gpioCfg;
 
-			// Now open device for processing
-			ret = (NPI_OpenDeviceFnArr[devIdx])(devPath, (npiSpiCfg_t *) &npiSpiCfg);
+				// Now open device for processing
+				ret = (NPI_OpenDeviceFnArr[devIdx])(devPath, (npiSpiCfg_t *) &npiSpiCfg);
 
-			// Perform Reset of the RNP
-			(NPI_ResetSlaveFnArr[devIdx])();
+				// Perform Reset of the RNP
+				(NPI_ResetSlaveFnArr[devIdx])();
 
-			// Do the Hw Handshake
-			(NPI_SynchSlaveFnArr[devIdx])();
-		}
-		#endif
-		break;
-
-	case NPI_I2C_FN_ARR_IDX:
-		#if (defined NPI_I2C) && (NPI_I2C == TRUE)
-			{
-				npiI2cCfg_t i2cCfg;
-				i2cCfg.gpioCfg = gpioCfg;
-
-				// Open the Device and perform a reset
-				ret = (NPI_OpenDeviceFnArr[devIdx])(devPath, (npiI2cCfg_t *) &i2cCfg);
+				// Do the Hw Handshake
+				(NPI_SynchSlaveFnArr[devIdx])();
 			}
-		#endif
-		break;
-	default:
-		ret = NPI_LNX_FAILURE;
-		break;
+			#endif
+			break;
+
+		case NPI_I2C_FN_ARR_IDX:
+			#if (defined NPI_I2C) && (NPI_I2C == TRUE)
+				{
+					npiI2cCfg_t i2cCfg;
+					i2cCfg.gpioCfg = gpioCfg;
+
+					// Open the Device and perform a reset
+					ret = (NPI_OpenDeviceFnArr[devIdx])(devPath, (npiI2cCfg_t *) &i2cCfg);
+				}
+			#endif
+			break;
+		default:
+			ret = NPI_LNX_FAILURE;
+			break;
 	}
 
 	// Get port from configuration file
