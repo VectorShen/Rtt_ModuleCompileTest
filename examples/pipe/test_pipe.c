@@ -22,6 +22,8 @@
 
 #define READ_PIPE_OPEN_FLAG_RD_ONLY				(O_RDONLY)
 #define READ_PIPE_OPEN_FLAG_RD_ONLY_NONBLOCK	(O_RDONLY | O_NONBLOCK)
+#define READ_PIPE_OPEN_FLAG_RDWR				(O_RDWR)
+#define READ_PIPE_OPEN_FLAG_RDWR_NONBLOCK		(O_RDWR | O_NONBLOCK)
 #define WRITE_PIPE_OPEN_FLAG_WR_ONLY			(O_WRONLY)
 #define WRITE_PIPE_OPEN_FLAG_WR_ONLY_NONBLOCK	(O_WRONLY | O_NONBLOCK)
 
@@ -57,7 +59,7 @@ void read_pipe_thread_entry(void* arg)
     int timeout_cnt = 0xffffffff;
 #endif
 
-    fd=open(PATH_OF_TEST_PIPE, READ_PIPE_OPEN_FLAG_RD_ONLY_NONBLOCK, 0);
+    fd=open(PATH_OF_TEST_PIPE, READ_PIPE_OPEN_FLAG_RDWR_NONBLOCK, 0);
     if(fd==-1)
     {
     	rt_kprintf("open %s for read error\n", PATH_OF_TEST_PIPE);
@@ -118,7 +120,7 @@ void read_pipe_thread_entry(void* arg)
 						close(fd);
 						FD_CLR(fd, &activePipesFDs);
 #if 1
-					    fd=open(PATH_OF_TEST_PIPE, READ_PIPE_OPEN_FLAG_RD_ONLY_NONBLOCK, 0);
+					    fd=open(PATH_OF_TEST_PIPE, READ_PIPE_OPEN_FLAG_RDWR_NONBLOCK, 0);
 					    if(fd==-1)
 					    {
 					    	rt_kprintf("open %s for read error\n", PATH_OF_TEST_PIPE);
