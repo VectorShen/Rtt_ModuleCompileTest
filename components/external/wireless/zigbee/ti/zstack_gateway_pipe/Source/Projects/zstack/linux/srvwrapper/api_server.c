@@ -50,7 +50,7 @@
 #include <fcntl.h>
 
 #include <pthread.h>
-#include <bits/local_lim.h>
+//#include <bits/local_lim.h>
 #include <errno.h>
 
 #include "hal_rpc.h"
@@ -627,7 +627,7 @@ static int createReadWritePipes( emServerId serverId )
 	{
 		printf ("cannot create fifo %s\n", listenReadPipePathName);
 	}
-	//非阻塞打开读管道，写管道的打开要等读管道接收到数据再操作
+	//闈為樆濉炴墦寮�璇荤閬擄紝鍐欑閬撶殑鎵撳紑瑕佺瓑璇荤閬撴帴鏀跺埌鏁版嵁鍐嶆搷浣�
 	listenPipeReadHndl = open (listenReadPipePathName, O_RDONLY | O_NONBLOCK, 0);
 	if (listenPipeReadHndl == -1)
 	{
@@ -732,7 +732,7 @@ void *apislisteningThreadFunc( void *ptr )
 			{
                 if( c == listenPipeReadHndl )
                 {
-					//接收客户端管道的数据
+					//鎺ユ敹瀹㈡埛绔閬撶殑鏁版嵁
 					memset(listen_buf,'\0',SERVER_LISTEN_BUF_SIZE);
 					n = read( listenPipeReadHndl, listen_buf, SERVER_LISTEN_BUF_SIZE );
 					if ( n <= 0 )
@@ -804,9 +804,9 @@ void *apislisteningThreadFunc( void *ptr )
                         }
 						if( ret == APIS_LNX_SUCCESS )
 						{
-							//是正确的客户端管道连接数据
-							//打开写管道，写入数据，并打开相应编号管道的读写描述符，加入fd select的控制里
-                            //阻塞打开，防止不同进程运行快慢问题
+							//鏄纭殑瀹㈡埛绔閬撹繛鎺ユ暟鎹�
+							//鎵撳紑鍐欑閬擄紝鍐欏叆鏁版嵁锛屽苟鎵撳紑鐩稿簲缂栧彿绠￠亾鐨勮鍐欐弿杩扮锛屽姞鍏d select鐨勬帶鍒堕噷
+                            //闃诲鎵撳紑锛岄槻姝笉鍚岃繘绋嬭繍琛屽揩鎱㈤棶棰�
 							printf("writePipePathName is %s.\n", writePipePathName);
 							listenPipeWriteHndl=open(writePipePathName, O_WRONLY, 0);
 							if(listenPipeWriteHndl==-1)
@@ -820,7 +820,7 @@ void *apislisteningThreadFunc( void *ptr )
 							}
                             sprintf(assignedId,"%d",clientsNum);
 
-							//更新管道文件名
+							//鏇存柊绠￠亾鏂囦欢鍚�
 							memset(tmpReadPipeName, '\0', TMP_PIPE_NAME_SIZE);
 							memset(tmpWritePipeName, '\0', TMP_PIPE_NAME_SIZE);
 							sprintf(tmpReadPipeName, "%s%d", readPipePathName, clientsNum);
@@ -828,7 +828,7 @@ void *apislisteningThreadFunc( void *ptr )
 
                             clientsNum++;
                             
-							//非阻塞创建管道
+							//闈為樆濉炲垱寤虹閬�
 							if((mkfifo(tmpReadPipeName,O_CREAT|O_EXCL)<0)&&(errno!=EEXIST))
 							{
 								printf("cannot create fifo %s\n", tmpReadPipeName);
@@ -837,7 +837,7 @@ void *apislisteningThreadFunc( void *ptr )
 							{
 								printf("cannot create fifo %s\n", tmpWritePipeName);
 							}	
-							//非阻塞打开读管道
+							//闈為樆濉炴墦寮�璇荤閬�
 							tmpReadPipe = open(tmpReadPipeName, O_RDONLY|O_NONBLOCK, 0);
 							if(tmpReadPipe == -1)
 							{
@@ -846,10 +846,10 @@ void *apislisteningThreadFunc( void *ptr )
 								break;
 							}
 							
-                            //写入监听管道
+                            //鍐欏叆鐩戝惉绠￠亾
 							write(listenPipeWriteHndl, assignedId, strlen(assignedId));
 
-							//阻塞打开写管道
+							//闃诲鎵撳紑鍐欑閬�
 							tmpWritePipe = open(tmpWritePipeName, O_WRONLY, 0);
 							if(tmpWritePipe == -1)
 							{
@@ -857,7 +857,7 @@ void *apislisteningThreadFunc( void *ptr )
 								ret = APIS_LNX_FAILURE;
 								break;
 							}
-							//读写管道描述符加入到activelist中
+							//璇诲啓绠￠亾鎻忚堪绗﹀姞鍏ュ埌activelist涓�
 							ret = addToActiveList(tmpReadPipe, tmpWritePipe);
 							if ( ret != APIS_LNX_SUCCESS )
 							{
@@ -876,7 +876,7 @@ void *apislisteningThreadFunc( void *ptr )
 
 								apisMsgCB( searchWritePipeFromReadPipe(tmpReadPipe), 0, 0, 0, NULL, SERVER_CONNECT );
 							}
-							//关闭监听时的写管道
+							//鍏抽棴鐩戝惉鏃剁殑鍐欑閬�
 							close(listenPipeWriteHndl);
 						}
                         else

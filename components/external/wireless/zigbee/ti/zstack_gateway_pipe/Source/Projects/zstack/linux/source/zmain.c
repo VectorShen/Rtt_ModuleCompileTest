@@ -128,7 +128,7 @@ apisSysParams_t sysParams;
 // Parameter Descriptors
 configTableItem_t configItems[] = 
 {
-	{&(sysParams.port), "SERVER_PORT", TYPE_UINT16, 1},
+	{&(sysParams.serverId), "SERVER_ID", TYPE_UINT8, 1},
 	{&zgDefaultChannelList, "DEFAULT_CHANLIST", TYPE_UINT32, 1},
 	{&zgConfigPANID, "ZDAPP_CONFIG_PAN_ID", TYPE_UINT16, 1},
 	{&zgRouteExpiryTime, "ROUTE_EXPIRY_TIME", TYPE_UINT8, 1},

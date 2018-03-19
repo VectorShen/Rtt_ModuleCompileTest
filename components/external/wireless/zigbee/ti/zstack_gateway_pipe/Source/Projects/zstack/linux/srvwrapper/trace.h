@@ -3,6 +3,7 @@
 
 #include <pthread.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 extern pthread_key_t thread_name_key;
 extern pthread_key_t thread_trace_mask_key;

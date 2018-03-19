@@ -48,6 +48,7 @@ extern "C"
  * ------------------------------------------------------------------------------------------------
  */
 #include <stdlib.h>
+#include <stdbool.h>
 
 /* ------------------------------------------------------------------------------------------------
  * Constants
@@ -72,6 +73,12 @@ extern "C"
  * Typedefs
  * ------------------------------------------------------------------------------------------------
  */
+typedef unsigned char 	uint8;
+typedef unsigned short 	uint16;
+
+#ifndef __cplusplus // For C++ compiler typedef bool will cause lots of trouble
+//typedef unsigned char   bool;
+#endif
 
 // The data structure for header portion of
 // 16 bit length MT frame

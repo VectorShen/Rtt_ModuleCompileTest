@@ -40,7 +40,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
-#include <execinfo.h>
+//#include <execinfo.h>
 #include <time.h>
 
 #include "hal_types.h"

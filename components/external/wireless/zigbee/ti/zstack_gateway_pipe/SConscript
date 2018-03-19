@@ -4,7 +4,19 @@ src = []
 path = [GetCurrentDir() + '/../../../../../../components/drivers/include/ipc',
     GetCurrentDir() + '/Source/Projects/zstack/linux/include']
 
-define = []
+define = ['__BIG_DEBUG__', 'PTHREAD_STACK_MIN=4096']
+
+components_path = [GetCurrentDir() + '/Source/Components/hal/include',
+    GetCurrentDir() + '/Source/Components/zmac',
+    GetCurrentDir() + '/Source/Components/mac/include',
+    GetCurrentDir() + '/Source/Components/mt',
+    GetCurrentDir() + '/Source/Components/services/saddr',
+    GetCurrentDir() + '/Source/Components/stack/af',
+    GetCurrentDir() + '/Source/Components/stack/nwk',
+    GetCurrentDir() + '/Source/Components/stack/sec',
+    GetCurrentDir() + '/Source/Components/stack/sys',
+    GetCurrentDir() + '/Source/Components/stack/zcl',
+    GetCurrentDir() + '/Source/Components/stack/zdo']
 
 version_query_src = Glob("Source/Projects/zstack/linux/version_query_minitool/Source/*.c")
 version_query_path = [GetCurrentDir() + '/Source/Projects/zstack/linux/version_query_minitool/Source']
@@ -18,6 +30,35 @@ Source/Projects/tools/LinuxHost/ipclib/server/npi_lnx_ipc.c
 npi_path = [GetCurrentDir() + '/Source/Projects/tools/LinuxHost/ipclib/server',
     GetCurrentDir() + '/Source/Projects/tools/LinuxHost/ipclib/common']
 npi_define = ['MRDY_EARLY_FIX', 'RNP_HOST', 'SRDY_INTERRUPT']
+
+zlsznp_src = Split("""
+Source/Projects/zstack/linux/zstackserverznp/osal_zstack_server_znp.c
+Source/Projects/zstack/linux/zstackserverznp/znp_af.c
+Source/Projects/zstack/linux/zstackserverznp/znp_misc.c
+Source/Projects/zstack/linux/zstackserverznp/znp_zdo.c
+Source/Projects/zstack/linux/zstackpb/zstack.pb-c.c
+Source/Projects/zstack/linux/zstackpb/zstackpb.c
+Source/Projects/zstack/linux/linux_osal/common/OSAL.c
+Source/Projects/zstack/linux/linux_osal/common/OSAL_Memory.c
+Source/Projects/zstack/linux/linux_osal/common/OSAL_PwrMgr.c
+Source/Projects/zstack/linux/linux_osal/common/OSAL_Timers.c
+Source/Projects/zstack/linux/source/OnBoard.c
+Source/Projects/zstack/linux/source/zmain.c
+Source/Projects/zstack/linux/srvwrapper/configparser.c
+Source/Projects/zstack/linux/srvwrapper/main.c
+Source/Projects/zstack/linux/srvwrapper/trace.c
+Source/Projects/zstack/linux/srvwrapper/api_client.c
+Source/Projects/zstack/linux/srvwrapper/api_server.c
+""")
+
+zlsznp_path = [GetCurrentDir() + '/Source/Projects/zstack/linux/linux_osal/include',
+    GetCurrentDir() + '/Source/Projects/zstack/linux/linux_osal/include',
+    GetCurrentDir() + '/Source/Projects/zstack/linux/hal',
+    GetCurrentDir() + '/Source/Projects/zstack/linux/source',
+    GetCurrentDir() + '/Source/Projects/zstack/linux/srvwrapper',
+    GetCurrentDir() + '/Source/Projects/zstack/linux/zstackpb',
+    GetCurrentDir() + '/Source/Projects/zstack/linux/zmac']
+zlsznp_define = []
 
 nwkmgr_src = Split("""
 Source/Projects/zstack/linux/nwkmgr/nwkmgr.pb-c.c
@@ -76,6 +117,11 @@ if GetDepend(['RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY_NPI_IPC']):
     src += npi_src
     path += npi_path + [GetCurrentDir() + '/../../../../../../libc/pthreads']
     define += npi_define
+
+if GetDepend(['RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY_ZLSZNP']):
+    src += zlsznp_src
+    path += zlsznp_path + components_path
+    define += zlsznp_define
 
 if GetDepend(['RT_USING_ZIGBEE_TI_GATEWAY_NWKMGR']):
     src += nwkmgr_src

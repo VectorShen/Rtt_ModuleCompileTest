@@ -47,6 +47,7 @@
 #include <dfs_posix.h>
 #include <dfs_poll.h>
 #include <sys/unistd.h>
+#include <stdbool.h>
 
 #undef printf
 #define printf 	rt_kprintf
@@ -71,7 +72,7 @@ typedef unsigned long   uint32;
 #endif
 
 #ifndef __cplusplus // For C++ compiler typedef bool will cause lots of trouble
-typedef unsigned char   bool;
+//typedef unsigned char   bool;
 #endif
 
 typedef uint8           halDataAlign_t;

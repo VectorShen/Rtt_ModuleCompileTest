@@ -49,7 +49,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <signal.h>
-#include <bits/local_lim.h>
+//#include <bits/local_lim.h>
 #include <fcntl.h>
 
 #include "hal_types.h"
@@ -310,7 +310,7 @@ apicHandle_t apicInit( const char *srvName, bool getVer, pfnAsyncMsgCb pFn )
 	{
 		uiPrintf ("cannot create fifo %s\n", writePipePathName);
 	}
-    //阻塞打开写监听管道
+    //闃诲鎵撳紑鍐欑洃鍚閬�
     tmpWritePipe = open(writePipePathName, O_WRONLY, 0);
     if(tmpWritePipe == -1)
     {
@@ -318,24 +318,24 @@ apicHandle_t apicInit( const char *srvName, bool getVer, pfnAsyncMsgCb pFn )
         uiPrintf("apicInit open tmpWritePipe failed.\n");
     }
 	//pause();
-    //写入管道
+    //鍐欏叆绠￠亾
     n = write (tmpWritePipe,checkString,strlen(checkString));
 	uiPrintf("write to tmpWritePipe checkString %d.\n", n);
-    //阻塞打开读监听管道
+    //闃诲鎵撳紑璇荤洃鍚閬�
     tmpReadPipe = open(readPipePathName, O_RDONLY, 0);
     if(tmpReadPipe == -1)
     {
         //error
         uiPrintf("open readPipePathName failed\n");
     }
-    //读取分配的id
+    //璇诲彇鍒嗛厤鐨刬d
     readWriteNum = read(tmpReadPipe, assignedIdBuf, APIC_READ_ASSIGNED_ID_BUF_LEN);
 	uiPrintf("readWriteNum is %d.\n",readWriteNum);
     if(readWriteNum<=0)
     {
         //error
     }
-    //附属到默认管道名后面作为一个临时名字
+    //闄勫睘鍒伴粯璁ょ閬撳悕鍚庨潰浣滀负涓�涓复鏃跺悕瀛�
     strcat(readPipePathName,assignedIdBuf);
     strcat(writePipePathName,assignedIdBuf); 
 
@@ -343,7 +343,7 @@ apicHandle_t apicInit( const char *srvName, bool getVer, pfnAsyncMsgCb pFn )
 	uiPrintf("writePipePathName is %s\n",writePipePathName);
 
 	//pause();
-    //关闭监听管道的读写
+    //鍏抽棴鐩戝惉绠￠亾鐨勮鍐�
 	/**********************************************************************
 	 * Open to the API server pipes
 	 **********************************************************************/

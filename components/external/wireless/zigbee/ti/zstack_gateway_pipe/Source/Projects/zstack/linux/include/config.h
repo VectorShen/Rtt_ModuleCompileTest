@@ -1,6 +1,8 @@
 #ifndef _CONFIG_H_
 #define _CONFIG_H_
 
+#include <libc/libc_fcntl.h>
+
 #define FIFO_PATH_PREFIX						"/dev/"
 #define FIFO_PATH_BUFFER_LEN					20
 
@@ -39,6 +41,9 @@
 #define TMP_ASSIGNED_ID_STRING_LEN              3
 #define TMP_PIPE_CHECK_STRING_LEN               30
 #define SERVER_LISTEN_BUF_SIZE			        30
+
+#define ZB_LISTEN_PIPE_OPEN_FLAG				(O_RDWR | O_NONBLOCK)
+#define ZB_READ_PIPE_OPEN_FLAG					(O_RDWR | O_NONBLOCK)
 
 typedef enum
 {
