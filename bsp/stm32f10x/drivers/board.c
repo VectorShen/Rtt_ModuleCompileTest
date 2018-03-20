@@ -21,6 +21,9 @@
 #include "board.h"
 #include "usart.h"
 
+#ifdef RT_USING_RTC
+#include "stm32f1_rtc.h"
+#endif
 /**
  * @addtogroup STM32
  */
@@ -183,6 +186,10 @@ void rt_hw_board_init(void)
 
     rt_hw_usart_init();
     rt_console_set_device(RT_CONSOLE_DEVICE_NAME);
+
+#ifdef RT_USING_RTC
+    rt_hw_rtc_init();
+#endif
 
 #ifdef RT_USING_COMPONENTS_INIT
     rt_components_board_init();
