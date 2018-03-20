@@ -133,6 +133,10 @@
 #define RT_USING_CAN
 #define RT_CAN_USING_HDR
 /* RT_USING_HWTIMER is not set */
+//#define RT_USING_HWTIMER
+#ifdef RT_USING_HWTIMER
+#define RT_USING_HWTIMER_TEST
+#endif /* RT_USING_HWTIMER */
 /* RT_USING_CPUTIME is not set */
 /* RT_USING_I2C is not set */
 #define RT_USING_PIN
