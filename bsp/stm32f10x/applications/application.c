@@ -91,6 +91,12 @@ extern int amessage_main (void);
 #endif /* RT_USING_PROTOBUF_C_TEST */
 #endif /* RT_USING_PROTOBUF_C */
 
+#ifdef RT_USING_EXAMPLES
+#ifdef RT_USING_SFTIMER_TEST
+extern int sftimer(void);
+#endif /* RT_USING_SFTIMER_TEST */
+#endif /* RT_USING_EXAMPLES */
+
 void rt_init_thread_entry(void* parameter)
 {
 #ifdef RT_USING_COMPONENTS_INIT
@@ -115,6 +121,12 @@ void rt_init_thread_entry(void* parameter)
     else
         rt_kprintf("File System initialzation failed!\n");
 #endif  /* RT_USING_DFS */
+
+#ifdef RT_USING_EXAMPLES
+#ifdef RT_USING_SFTIMER_TEST
+	sftimer();
+#endif /* RT_USING_SFTIMER */
+#endif /* RT_USING_EXAMPLES */
 
 #ifdef RT_USING_RTGUI
     {
