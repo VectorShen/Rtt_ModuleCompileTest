@@ -4,7 +4,7 @@ src = Split("""
 test_pipe.c
 """)
 
-group = DefineGroup('examples', src,
+group = DefineGroup('pipe', src,
                     depend = ['RT_USING_COMPONENTS_DRIVERS_PIPE', 'RT_USING_COMPONENTS_DRIVERS_PIPE_TEST'],
                     CPPPATH=[GetCurrentDir()])
 
