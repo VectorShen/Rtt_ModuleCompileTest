@@ -39,6 +39,7 @@ struct rt_sftimer_device
     struct rt_timer* timer;
     struct rt_sftimer_device_data* data;
     rt_uint32_t timeout_times;
+    //rt_wqueue_t reader_queue;
     struct rt_mutex lock;
 };
 typedef struct rt_sftimer_device rt_sftimer_t;

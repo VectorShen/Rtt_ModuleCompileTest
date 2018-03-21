@@ -82,6 +82,7 @@ static int sftimer_fops_close(struct dfs_fd *fd)
         rt_timer_delete(timer->timer);
         timer->timer = RT_NULL;
     }
+    //rt_wqueue_wakeup(&(timer->reader_queue), (void*)(POLLIN | POLLERR | POLLHUP));
     device->ref_count --;
 
     rt_mutex_release(&(timer->lock));
@@ -121,18 +122,24 @@ static int sftimer_fops_read(struct dfs_fd *fd, void *buf, size_t count)
     rt_sftimer_t *timer = (rt_sftimer_t *)fd->data;
     RT_ASSERT(timer != RT_NULL);
 
-    if(fd->flags & O_NONBLOCK)
-        res = -EAGAIN;
-    else
+    rt_mutex_take(&(timer->lock), RT_WAITING_FOREVER);
+
+    while(1)
     {
-        *(rt_uint32_t*)buf = timer->timeout_times;
-        res = sizeof(rt_uint32_t);
         if(timer->timeout_times>0)
         {
+            *(rt_uint32_t*)buf = timer->timeout_times;
+            res = sizeof(rt_uint32_t);
             timer->timeout_times = 0;
+            break;
+        }
+        else
+        {
+            //rt_wqueue_wait(&(timer->reader_queue), 0, -1);
+        	rt_thread_delay(10);
         }
     }
-
+    rt_mutex_release(&timer->lock);
     return res;
 }
 
@@ -147,18 +154,15 @@ static int sftimer_fops_poll(struct dfs_fd *fd, rt_pollreq_t *req)
 {
     int mask = 0;
     int flags = 0;
-    rt_device_t device;
     rt_sftimer_t *timer;
 
-    timer = (rt_sftimer_t *)device;
+    timer = (rt_sftimer_t *)fd->data;
     RT_ASSERT(timer != RT_NULL);
 
-    device = &(timer->parent);
-
+    //rt_poll_add(&(timer->reader_queue), req);
     flags = fd->flags & O_ACCMODE;
     if(flags == O_RDONLY || flags == O_RDWR)
     {
-        rt_poll_add(&(device->wait_queue), req);
         if(timer->timeout_times > 0)
         {
             mask |= POLLIN;
@@ -222,8 +226,7 @@ rt_sftimer_t *rt_sftimer_create(const char *name,
     rt_memset(sftimer, 0, sizeof(rt_sftimer_t));
     sftimer->data = rt_sftimer_device_data;
     rt_mutex_init(&(sftimer->lock), name, RT_IPC_FLAG_FIFO);
-
-    //dev->user_data = sftimer;
+    //rt_list_init(&(sftimer->reader_queue));
 
     dev = &(sftimer->parent);
     dev->type = RT_Device_Class_Timer;
