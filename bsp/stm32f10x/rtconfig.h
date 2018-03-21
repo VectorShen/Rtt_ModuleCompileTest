@@ -55,7 +55,7 @@
 /* RT-Thread External */
 #define RT_USING_PROTOBUF_C
 #ifdef RT_USING_PROTOBUF_C
-#define RT_USING_PROTOBUF_C_TEST
+//#define RT_USING_PROTOBUF_C_TEST
 #endif /* RT_USING_PROTOBUF_C */
 
 /* RT-Thread Components */
