@@ -128,5 +128,13 @@ int rt_tick_from_millisecond(rt_int32_t ms)
 }
 RTM_EXPORT(rt_tick_from_millisecond);
 
+rt_int32_t rt_millisecond_from_tick(int tick)
+{
+    rt_int32_t ms;
+    ms = (tick * 1000 - 999) / RT_TICK_PER_SECOND;
+
+    return ms;
+}
+RTM_EXPORT(rt_millisecond_from_tick);
 /**@}*/
 

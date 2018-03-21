@@ -1,0 +1,13 @@
+from building import *
+
+src = Split("""
+test_timerfd.c
+""")
+
+path = [GetCurrentDir() + '/../../components/libc/time']
+
+group = DefineGroup('pipe', src,
+                    depend = ['RT_USING_TIMERFD', 'RT_USING_TIMERFD_TEST'],
+                    CPPPATH=path)
+
+Return('group')

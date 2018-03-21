@@ -68,6 +68,11 @@
 //#define RT_USING_COMPONENTS_DRIVERS_PIPE_TEST
 #endif /* RT_USING_COMPONENTS_DRIVERS_PIPE */
 
+#define RT_USING_TIMERFD
+#ifdef RT_USING_TIMERFD
+#define RT_USING_TIMERFD_TEST
+#endif /* RT_USING_TIMERFD */
+
 /* RT_USING_COMPONENTS_INIT is not set */
 #define RT_USING_COMPONENTS_INIT
 
@@ -140,6 +145,7 @@
 /* RT_USING_MTD_NOR is not set */
 /* RT_USING_MTD_NAND is not set */
 /* RT_USING_RTC is not set */
+#define RT_USING_RTC
 /* RT_USING_SDIO is not set */
 /* RT_USING_SPI is not set */
 /* RT_USING_WDT is not set */
@@ -275,7 +281,7 @@
 #define RT_USING_EXAMPLES
 #ifdef RT_USING_EXAMPLES
 #ifdef RT_USING_SFTIMER
-#define RT_USING_SFTIMER_TEST
+//#define RT_USING_SFTIMER_TEST
 #endif /* RT_USING_SFTIMER */
 
 #endif /* RT_USING_EXAMPLES */

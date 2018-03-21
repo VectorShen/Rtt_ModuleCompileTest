@@ -97,6 +97,12 @@ extern int sftimer(void);
 #endif /* RT_USING_SFTIMER_TEST */
 #endif /* RT_USING_EXAMPLES */
 
+#ifdef RT_USING_TIMERFD
+#ifdef RT_USING_TIMERFD_TEST
+extern char* test_timerfd_args[4];
+extern int test_timerfd_main (int argc, char *argv[]);
+#endif
+#endif
 void rt_init_thread_entry(void* parameter)
 {
 #ifdef RT_USING_COMPONENTS_INIT
@@ -127,6 +133,12 @@ void rt_init_thread_entry(void* parameter)
 	sftimer();
 #endif /* RT_USING_SFTIMER */
 #endif /* RT_USING_EXAMPLES */
+
+#ifdef RT_USING_TIMERFD
+#ifdef RT_USING_TIMERFD_TEST
+	test_timerfd_main (4, test_timerfd_args);
+#endif
+#endif
 
 #ifdef RT_USING_RTGUI
     {
