@@ -104,6 +104,10 @@ extern "C" {
 #include "drivers/hwtimer.h"
 #endif
 
+#ifdef RT_USING_SFTIMER
+#include "drivers/sftimer.h"
+#endif 
+
 #ifdef RT_USING_AUDIO
 #include "drivers/audio.h"
 #endif

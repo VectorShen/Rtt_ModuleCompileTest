@@ -95,6 +95,11 @@
 //#define RT_USING_COMPONENTS_DRIVERS_PIPE_TEST
 #endif /* RT_USING_COMPONENTS_DRIVERS_PIPE */
 
+#define RT_USING_TIMERFD
+#ifdef RT_USING_TIMERFD
+#define RT_USING_TIMERFD_TEST
+#endif /* RT_USING_TIMERFD */
+
 /* RT_USING_COMPONENTS_INIT is not set */
 #define RT_USING_COMPONENTS_INIT
 
@@ -164,12 +169,14 @@
 #endif
 
 /* RT_USING_HWTIMER is not set */
+#define RT_USING_SFTIMER
 /* RT_USING_CPUTIME is not set */
 /* RT_USING_I2C is not set */
 #define RT_USING_PIN
 /* RT_USING_MTD_NOR is not set */
 /* RT_USING_MTD_NAND is not set */
 /* RT_USING_RTC is not set */
+#define RT_USING_RTC
 /* RT_USING_SDIO is not set */
 /* RT_USING_SPI is not set */
 /* RT_USING_WDT is not set */
@@ -215,6 +222,17 @@
 
 /* RT_USING_CMSIS_OS is not set */
 #define RT_USING_RTT_CMSIS
+
+/* RT-Thread Examples */
+//#define RT_USING_EXAMPLES_LIBC
+#ifdef RT_USING_EXAMPLES_LIBC
+#define RT_USING_EXAMPLES_LIBC_TERMIOS
+#ifdef RT_USING_EXAMPLES_LIBC_TERMIOS
+#ifndef RT_USING_POSIX_TERMIOS
+#define RT_USING_POSIX_TERMIOS
+#endif /* RT_USING_POSIX_TERMIOS */
+#endif /* RT_USING_EXAMPLES_LIBC_TERMIOS */
+#endif /* RT_USING_EXAMPLES_LIBC */
 
 /* RT-Thread online packages */
 
@@ -291,4 +309,12 @@
 //#define RT_USING_UART3
 /* RT_USING_UART4 is not set */
 
+/* Examples */
+#define RT_USING_EXAMPLES
+#ifdef RT_USING_EXAMPLES
+#ifdef RT_USING_SFTIMER
+//#define RT_USING_SFTIMER_TEST
+#endif /* RT_USING_SFTIMER */
+
+#endif /* RT_USING_EXAMPLES */
 #endif

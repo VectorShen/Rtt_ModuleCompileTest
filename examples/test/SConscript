@@ -1,0 +1,13 @@
+from building import *
+
+src = []
+
+if GetDepend(['RT_USING_HWTIMER_TEST']):
+    src += ['hwtimer_test.c']
+    
+if GetDepend(['RT_USING_SFTIMER_TEST']):
+    src += ['sftimer_test.c']
+    
+group = DefineGroup('test', src, depend = [])
+
+Return('group')

@@ -343,7 +343,7 @@ int termios_test(int argc, char **argv)
 
     tid = rt_thread_create("termtest",
         termios_test_entry, (void *)&term_param,
-        512, RT_THREAD_PRIORITY_MAX/3, 20);
+        /*512*/2048, RT_THREAD_PRIORITY_MAX/3, 20);
 
     if (tid != RT_NULL)
         rt_thread_startup(tid);
