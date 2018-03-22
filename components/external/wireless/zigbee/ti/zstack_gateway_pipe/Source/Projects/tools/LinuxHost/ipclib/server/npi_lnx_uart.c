@@ -306,6 +306,10 @@ int NPI_UART_OpenDevice(const char *portName, void *pCfg)
 		npi_ipc_errno = NPI_LNX_ERROR_UART_OPEN_FAILED_RX_THREAD;
 		return NPI_LNX_FAILURE;
 	}
+	else
+	{
+		rt_thread_delay(RT_TICK_PER_SECOND*5);
+	}
 
 	return NPI_LNX_SUCCESS;
 }
@@ -730,7 +734,7 @@ static int npi_opentty(const char *devpath)
 	struct termios newtio;
 
 	/* NOCTTY so that RNP cannot kill the current process by ^C */
-	npi_fd = open(devpath, O_RDWR | O_NOCTTY | O_NONBLOCK);
+	npi_fd = open(devpath, O_RDWR | O_NOCTTY /*| O_NONBLOCK*/);
 	if (npi_fd < 0) 
     {
 		return npi_fd;
