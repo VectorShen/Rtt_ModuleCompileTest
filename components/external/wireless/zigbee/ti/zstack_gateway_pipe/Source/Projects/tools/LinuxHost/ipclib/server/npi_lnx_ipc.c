@@ -318,10 +318,19 @@ struct
 };
 #endif //__STRESS_TEST__
 
+#if 0
 char* npi_rtt_ipc_argvs[2] =
 {
 	"npi_rtt_ipc_main", "/NPI_Gateway.cfg"
 };
+#else
+char* npi_rtt_ipc_argvs[3] =
+{
+	"2",
+	"npi_rtt_ipc_main",
+	"/NPI_Gateway.cfg"
+};
+#endif
 
 /**************************************************************************************************
  *                                     Local Function Prototypes
@@ -446,8 +455,13 @@ static void print_usage(const char *prog)
  *
  *
  **************************************************************************************************/
-int npi_rtt_ipc_main(int argc, char ** argv)
+//int npi_rtt_ipc_main(int argc, char ** argv)
+void npi_rtt_ipc_main(void* args)
 {
+	int argc;
+	char** tmpArgv = (char**)args;
+	char** argv= tmpArgv+1;
+	argc = atoi(tmpArgv[0]);
 	int c;
 	int n;
 	int ret = NPI_LNX_SUCCESS;
@@ -1419,7 +1433,7 @@ int npi_rtt_ipc_main(int argc, char ** argv)
 	//            close(fdStressTestData);
 #endif //(defined __STRESS_TEST__) && (__STRESS_TEST__ == TRUE)
 
-	return ret;
+	//return ret;
 }
 
 int searchWritePipeFromActiveList(int readPipe)
@@ -2059,7 +2073,7 @@ int SerialConfigParser(RTT_FILE* serialCfgFd, const char* section,
 			{
 				invalidLineLen = TRUE;
 				debug_printf("Found line > 128 bytes\r");
-				rtt_fflush(stdout);
+				rtt_fflush(rtt_stdout);
 			}
 			else
 			{
@@ -2074,7 +2088,7 @@ int SerialConfigParser(RTT_FILE* serialCfgFd, const char* section,
 					resString[strlen(resString) - 1] = '\0';
 
 					debug_printf("Found line < 128 bytes\r");
-					rtt_fflush(stdout);
+					rtt_fflush(rtt_stdout);
 					if (resString[0] == '[')
 					{
 						debug_printf("Found section %s\n", resString);
@@ -2095,7 +2109,7 @@ int SerialConfigParser(RTT_FILE* serialCfgFd, const char* section,
 					}
 					else if (sectionFound == TRUE)
 					{
-						debug_printf("Line to process %s (strlen=%zd)\n",
+						debug_printf("Line to process %s (strlen=%d)\n",
 								resString,
 								strlen(resString));
 						// We have found our section, now we search for wanted key
@@ -2344,7 +2358,7 @@ int NPI_LNX_IPC_NotifyError(uint16 source, const char* errorMsg)
 	{
 		errorMsg = "Default msg. Requested msg too long.\n";
 		memcpy(msg.pData, errorMsg, strlen(errorMsg));
-		debug_printf("[NOTIFY_ERROR] Size of error message too long (%zd, max %d).\n",
+		debug_printf("[NOTIFY_ERROR] Size of error message too long (%d, max %d).\n",
 				strlen(errorMsg),
 				AP_MAX_BUF_LEN);
 	}

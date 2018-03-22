@@ -73,6 +73,8 @@
 /**************************************************************************************************
  * Typedefs
  **************************************************************************************************/
+#undef uiPrintf
+#define uiPrintf	rt_kprintf
 
 #ifdef API_CLIENT_8BIT_LEN
 typedef apic8BitLenMsgHdr_t apicMsgHdr_t;
@@ -215,6 +217,8 @@ apicHandle_t apicInit( const char *srvName, bool getVer, pfnAsyncMsgCb pFn )
 {
 	apicInstance_t *pInstance;
 	int n;
+    char npi_ipc_read_fifo_path[FIFO_PATH_BUFFER_LEN];
+    char npi_ipc_write_fifo_path[FIFO_PATH_BUFFER_LEN];
 	char readPipePathName[APIC_READWRITE_PIPE_NAME_LEN];
 	char writePipePathName[APIC_READWRITE_PIPE_NAME_LEN];
     char checkString[APIC_SEND_SERVER_PIPE_CHECK_STRING_LEN];
@@ -310,40 +314,43 @@ apicHandle_t apicInit( const char *srvName, bool getVer, pfnAsyncMsgCb pFn )
 	{
 		uiPrintf ("cannot create fifo %s\n", writePipePathName);
 	}
-    //闃诲鎵撳紑鍐欑洃鍚閬�
-    tmpWritePipe = open(writePipePathName, O_WRONLY, 0);
+
+	memset(npi_ipc_write_fifo_path, '\0', FIFO_PATH_BUFFER_LEN);
+	sprintf(npi_ipc_write_fifo_path, "%s%s", FIFO_PATH_PREFIX, writePipePathName);
+
+    tmpWritePipe = open(npi_ipc_write_fifo_path, O_WRONLY, 0);
     if(tmpWritePipe == -1)
     {
         //error
         uiPrintf("apicInit open tmpWritePipe failed.\n");
     }
-	//pause();
-    //鍐欏叆绠￠亾
+
     n = write (tmpWritePipe,checkString,strlen(checkString));
 	uiPrintf("write to tmpWritePipe checkString %d.\n", n);
-    //闃诲鎵撳紑璇荤洃鍚閬�
-    tmpReadPipe = open(readPipePathName, O_RDONLY, 0);
+
+	memset(npi_ipc_read_fifo_path, '\0', FIFO_PATH_BUFFER_LEN);
+	sprintf(npi_ipc_read_fifo_path, "%s%s", FIFO_PATH_PREFIX, readPipePathName);
+
+    tmpReadPipe = open(npi_ipc_read_fifo_path, O_RDONLY, 0);
     if(tmpReadPipe == -1)
     {
         //error
         uiPrintf("open readPipePathName failed\n");
     }
-    //璇诲彇鍒嗛厤鐨刬d
+
     readWriteNum = read(tmpReadPipe, assignedIdBuf, APIC_READ_ASSIGNED_ID_BUF_LEN);
 	uiPrintf("readWriteNum is %d.\n",readWriteNum);
     if(readWriteNum<=0)
     {
         //error
     }
-    //闄勫睘鍒伴粯璁ょ閬撳悕鍚庨潰浣滀负涓�涓复鏃跺悕瀛�
+
     strcat(readPipePathName,assignedIdBuf);
-    strcat(writePipePathName,assignedIdBuf); 
+    strcat(writePipePathName,assignedIdBuf);
 
 	uiPrintf("readPipePathName is %s\n",readPipePathName);
 	uiPrintf("writePipePathName is %s\n",writePipePathName);
 
-	//pause();
-    //鍏抽棴鐩戝惉绠￠亾鐨勮鍐�
 	/**********************************************************************
 	 * Open to the API server pipes
 	 **********************************************************************/
@@ -358,7 +365,12 @@ apicHandle_t apicInit( const char *srvName, bool getVer, pfnAsyncMsgCb pFn )
 		uiPrintf ("cannot create fifo %s\n", writePipePathName);
 	}
 
-	pInstance->sAPIreadPipe = open(readPipePathName, O_RDONLY, 0);
+	memset(npi_ipc_read_fifo_path, '\0', FIFO_PATH_BUFFER_LEN);
+	sprintf(npi_ipc_read_fifo_path, "%s%s", FIFO_PATH_PREFIX, readPipePathName);
+	memset(npi_ipc_write_fifo_path, '\0', FIFO_PATH_BUFFER_LEN);
+	sprintf(npi_ipc_write_fifo_path, "%s%s", FIFO_PATH_PREFIX, writePipePathName);
+
+	pInstance->sAPIreadPipe = open(npi_ipc_read_fifo_path, ZB_READ_PIPE_OPEN_FLAG, 0);
 	if(pInstance->sAPIreadPipe == -1)
 	{
 		perror( "read pipe open" );
@@ -367,7 +379,7 @@ apicHandle_t apicInit( const char *srvName, bool getVer, pfnAsyncMsgCb pFn )
 		free( pInstance );
 		return NULL;
 	}
-	pInstance->sAPIwritePipe = open(writePipePathName, O_WRONLY, 0);
+	pInstance->sAPIwritePipe = open(npi_ipc_write_fifo_path, O_WRONLY, 0);
 	if(pInstance->sAPIwritePipe == -1)
 	{
 		perror( "write pipe open" );
@@ -603,7 +615,7 @@ uint8 *apicSendSynchData( apicHandle_t handle, uint8 subSys, uint8 cmdId,
 		if ( writeOnce == 0 )
 		{
 			uiPrintfEx(trINFO, "\n[MUTEX] SRSP Mutex busy" );
-			fflush( stdout );
+			rtt_fflush( rtt_stdout );
 			writeOnce++;
 		}
 		else
@@ -619,7 +631,7 @@ uint8 *apicSendSynchData( apicHandle_t handle, uint8 subSys, uint8 cmdId,
 				writeOnce = 1;
 			}
 
-			fflush( stdout );
+			rtt_fflush( rtt_stdout );
 		}
 	}
 
@@ -1016,7 +1028,7 @@ static void *SISreadThreadFunc( void *ptr )
 						// and signal the synchronous reception
 						uiPrintfEx(trINFO, "[MUTEX] SRSP Cond signal set\n" );
 						uiPrintfEx(trINFO, "Client Read: (len %ld): ", pInstance->numOfReceivedSRSPbytes );
-						fflush( stdout );
+						rtt_fflush( rtt_stdout );
 
 						if ( pthread_mutex_lock( &pInstance->clientSREQmutex ) != 0 )
 						{

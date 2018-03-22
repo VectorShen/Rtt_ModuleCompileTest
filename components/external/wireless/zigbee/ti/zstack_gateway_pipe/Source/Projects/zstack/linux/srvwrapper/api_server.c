@@ -56,7 +56,7 @@
 #include "hal_rpc.h"
 #include "api_server.h"
 #include "trace.h"
-
+#include <dfs_select.h>
 /*********************************************************************
  * MACROS
  */
@@ -139,7 +139,7 @@ typedef struct _pipeinfo_t
 	int serverWritePipe;
 } Pipe_t;
 
-int clientsNum = 1;
+int api_server_clientsNum = 1;
 
 Pipe_t *activePipeList = NULL;
 size_t activePipeCount = 0;
@@ -627,7 +627,7 @@ static int createReadWritePipes( emServerId serverId )
 	{
 		printf ("cannot create fifo %s\n", listenReadPipePathName);
 	}
-	//闈為樆濉炴墦寮�璇荤閬擄紝鍐欑閬撶殑鎵撳紑瑕佺瓑璇荤閬撴帴鏀跺埌鏁版嵁鍐嶆搷浣�
+	//闂傚牏鍋ゅΟ鍡樼箙閻愭潙鈪电�殿噯鎷烽悹鍥吹椤撴悂鏌嗛幙鍕闁告劖鐟ч鎼佹焼閹捐埖鐣遍柟鍨尭缁辨垹鎲版担铏规惣閻犲洩宕甸鎼佹焼閹炬潙澶嶉柡锟界捄鍝勭厒闁轰胶澧楀畵渚�宕樺鍡樻儥濞达綇鎷�
 	listenPipeReadHndl = open (listenReadPipePathName, O_RDONLY | O_NONBLOCK, 0);
 	if (listenPipeReadHndl == -1)
 	{
@@ -732,7 +732,7 @@ void *apislisteningThreadFunc( void *ptr )
 			{
                 if( c == listenPipeReadHndl )
                 {
-					//鎺ユ敹瀹㈡埛绔閬撶殑鏁版嵁
+					//闁规亽鍎查弫鍦拷骞垮灪閸╂稓绮╅婊庡悁闂侇剚鎸惧▓鎴﹀极閻楀牆绁�
 					memset(listen_buf,'\0',SERVER_LISTEN_BUF_SIZE);
 					n = read( listenPipeReadHndl, listen_buf, SERVER_LISTEN_BUF_SIZE );
 					if ( n <= 0 )
@@ -804,9 +804,9 @@ void *apislisteningThreadFunc( void *ptr )
                         }
 						if( ret == APIS_LNX_SUCCESS )
 						{
-							//鏄纭殑瀹㈡埛绔閬撹繛鎺ユ暟鎹�
-							//鎵撳紑鍐欑閬擄紝鍐欏叆鏁版嵁锛屽苟鎵撳紑鐩稿簲缂栧彿绠￠亾鐨勮鍐欐弿杩扮锛屽姞鍏d select鐨勬帶鍒堕噷
-                            //闃诲鎵撳紑锛岄槻姝笉鍚岃繘绋嬭繍琛屽揩鎱㈤棶棰�
+							//闁哄嫷鍨遍婊呮兜椤旂偓鐣遍悗骞垮灪閸╂稓绮╅婊庡悁闂侇剚鎹佺换娑㈠箳閵夛附娈堕柟鐧告嫹
+							//闁瑰灚鎸哥槐鎴﹀礃濞嗘埈鍚�闂侇剚鎼槐婵嬪礃濞嗗繐寮抽柡浣哄瀹撲線鏁嶇仦鍊熷珯闁瑰灚鎸哥槐鎴︽儎缁嬭法瀹夌紓鍌涚墪瑜拌法绮婚敓鐘卞闁汇劌瀚浼村礃濞嗘劕浼庨弶鈺傚椤戜線鏁嶇仦钘夘潱闁稿浚娅杁 select闁汇劌瀚敮鍫曞礆閸洖娅�
+                            //闂傚啳顕ч、锝夊箥閹惧磭纾婚柨娑樼焸濡茶顫㈤～顓犵憹闁告艾鐭佺换妯肩矙鐎ｎ厾绠ラ悶娑樿嫰閹烩晠骞堥姀銈嗭紪濡府鎷�
 							printf("writePipePathName is %s.\n", writePipePathName);
 							listenPipeWriteHndl=open(writePipePathName, O_WRONLY, 0);
 							if(listenPipeWriteHndl==-1)
@@ -818,17 +818,17 @@ void *apislisteningThreadFunc( void *ptr )
 									break;
 								}
 							}
-                            sprintf(assignedId,"%d",clientsNum);
+                            sprintf(assignedId,"%d",api_server_clientsNum);
 
-							//鏇存柊绠￠亾鏂囦欢鍚�
+							//闁哄洤鐡ㄩ弻濠勭不閿熺姳澹曢柡鍌氭矗濞嗐垽宕ラ敓锟�
 							memset(tmpReadPipeName, '\0', TMP_PIPE_NAME_SIZE);
 							memset(tmpWritePipeName, '\0', TMP_PIPE_NAME_SIZE);
-							sprintf(tmpReadPipeName, "%s%d", readPipePathName, clientsNum);
-							sprintf(tmpWritePipeName, "%s%d", writePipePathName, clientsNum);
+							sprintf(tmpReadPipeName, "%s%d", readPipePathName, api_server_clientsNum);
+							sprintf(tmpWritePipeName, "%s%d", writePipePathName, api_server_clientsNum);
 
-                            clientsNum++;
+                            api_server_clientsNum++;
                             
-							//闈為樆濉炲垱寤虹閬�
+							//闂傚牏鍋ゅΟ鍡樼箙閻愭彃鐏＄�点倛娅ｉ鎼佹焼閿燂拷
 							if((mkfifo(tmpReadPipeName,O_CREAT|O_EXCL)<0)&&(errno!=EEXIST))
 							{
 								printf("cannot create fifo %s\n", tmpReadPipeName);
@@ -837,7 +837,7 @@ void *apislisteningThreadFunc( void *ptr )
 							{
 								printf("cannot create fifo %s\n", tmpWritePipeName);
 							}	
-							//闈為樆濉炴墦寮�璇荤閬�
+							//闂傚牏鍋ゅΟ鍡樼箙閻愭潙鈪电�殿噯鎷烽悹鍥吹椤撴悂鏌嗛敓锟�
 							tmpReadPipe = open(tmpReadPipeName, O_RDONLY|O_NONBLOCK, 0);
 							if(tmpReadPipe == -1)
 							{
@@ -846,10 +846,10 @@ void *apislisteningThreadFunc( void *ptr )
 								break;
 							}
 							
-                            //鍐欏叆鐩戝惉绠￠亾
+                            //闁告劖鐟ラ崣鍡涙儎閹存繃鍎旂紒鐙呯節娴滐拷
 							write(listenPipeWriteHndl, assignedId, strlen(assignedId));
 
-							//闃诲鎵撳紑鍐欑閬�
+							//闂傚啳顕ч、锝夊箥閹惧磭纾婚柛鎰懅椤撴悂鏌嗛敓锟�
 							tmpWritePipe = open(tmpWritePipeName, O_WRONLY, 0);
 							if(tmpWritePipe == -1)
 							{
@@ -857,7 +857,7 @@ void *apislisteningThreadFunc( void *ptr )
 								ret = APIS_LNX_FAILURE;
 								break;
 							}
-							//璇诲啓绠￠亾鎻忚堪绗﹀姞鍏ュ埌activelist涓�
+							//閻犲洩顕ч崯鎾剁不閿熺姳澹曢柟璇茬箺閸亞绮敃锟芥慨鐐哄礂閵夈儱鐓俛ctivelist濞戞搫鎷�
 							ret = addToActiveList(tmpReadPipe, tmpWritePipe);
 							if ( ret != APIS_LNX_SUCCESS )
 							{
@@ -876,7 +876,7 @@ void *apislisteningThreadFunc( void *ptr )
 
 								apisMsgCB( searchWritePipeFromReadPipe(tmpReadPipe), 0, 0, 0, NULL, SERVER_CONNECT );
 							}
-							//鍏抽棴鐩戝惉鏃剁殑鍐欑閬�
+							//闁稿繑濞婂Λ鎾儎閹存繃鍎旈柡鍐ㄥ濞堟垿宕樺▎鎴悁闂侇剨鎷�
 							close(listenPipeWriteHndl);
 						}
                         else

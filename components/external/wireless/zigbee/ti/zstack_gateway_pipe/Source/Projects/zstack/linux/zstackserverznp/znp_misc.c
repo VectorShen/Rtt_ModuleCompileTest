@@ -52,6 +52,7 @@
 #include "zstackpb.h"
 #include "trace.h"
 
+#include "f8wConfig.h"
 /*********************************************************************
  * Constants
  */

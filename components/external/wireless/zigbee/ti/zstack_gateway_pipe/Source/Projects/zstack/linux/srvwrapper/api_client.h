@@ -59,8 +59,13 @@ extern "C"
 #define NULL  0
 #endif
 
+#ifndef TRUE
 #define TRUE 1
+#endif
+
+#ifndef FALSE
 #define FALSE 0
+#endif
 
 // These came from npi_lnx.h
 #define AP_MAX_BUF_LEN                          256
@@ -95,7 +100,7 @@ typedef struct ATTR_PACKED
 #ifdef API_CLIENT_8BIT_LEN
 // The data structure for header portion of
 // 8 bit length MT frame
-typedef struct ATTR_PACKED
+typedef struct /*ATTR_PACKED*/
 {
     uint8 len;
     uint8 subSys;

@@ -13,6 +13,9 @@ extern bool trace_engine_initialized;
 
 extern uint32_t default_trace_enable_mask;
 
+#define TRUE 		true
+#define FALSE		false
+
 #define trUNMASKABLE 0
 #define trFATAL      1
 #define trERROR      2
@@ -65,8 +68,8 @@ extern uint32_t default_trace_enable_mask;
     { \
             if (1) \
             { \
-                printf("[%s/%s] %s: " fmt, to_string(SERVER_NAME), SPECIFIC_THREAD_NAME(), TRACE_LEVEL_NAME[trace_group], ##__VA_ARGS__); \
-                fflush(stdout); \
+                rt_kprintf("[%s/%s] %s: " fmt, to_string(SERVER_NAME), SPECIFIC_THREAD_NAME(), TRACE_LEVEL_NAME[trace_group], ##__VA_ARGS__); \
+                rtt_fflush(rtt_stdout); \
             } \
     } while (0)
 #endif

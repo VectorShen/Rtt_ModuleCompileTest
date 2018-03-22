@@ -97,7 +97,7 @@
 
 #define RT_USING_TIMERFD
 #ifdef RT_USING_TIMERFD
-#define RT_USING_TIMERFD_TEST
+//#define RT_USING_TIMERFD_TEST
 #endif /* RT_USING_TIMERFD */
 
 /* RT_USING_COMPONENTS_INIT is not set */
@@ -133,7 +133,7 @@
 #define DFS_USING_WORKDIR
 #define DFS_FILESYSTEMS_MAX 2
 #define DFS_FILESYSTEM_TYPES_MAX 2
-#define DFS_FD_MAX 4
+#define DFS_FD_MAX 20	//4
 #define RT_USING_DFS_ELMFAT
 
 /* elm-chan's FatFs, Generic FAT Filesystem Module */

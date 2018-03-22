@@ -45,7 +45,7 @@
 #include <poll.h>
 #include <time.h>
 #include <unistd.h>
-//#include <sys/timerfd.h>
+#include <sys/timerfd.h>
 #include <termios.h>
 
 #include "dfs_poll.h"

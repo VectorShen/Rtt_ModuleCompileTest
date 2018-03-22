@@ -84,19 +84,26 @@ void unregister_segmentation_fault_handler (void);
 int processUint32Flag (const char *flagLong, const char *flagShort,
 					 uint32_t * value, int *argc_p, char *argv[]);
 
+char* zlsznp_srv_args[3]=
+{
+	"srv_main",
+	"srv_npi_ipc",
+	"/config.ini"
+};
+
 /**************************************************************************************************
  **************************************************************************************************/
 
-int main (int argc, char *argv[])
+int srv_main (int argc, char *argv[])
 {
 	int exitCode = 0;
 
 	processUint32Flag ("--verbose", "-v", &default_trace_enable_mask, &argc,
 					 argv);
 
-	trace_init_main ("MAIN");
+	//trace_init_main ("MAIN");
 
-	register_segmentation_fault_handler ();
+	//register_segmentation_fault_handler ();
 
 	// Seed the random number generator with the current time
 	srand (time (NULL));
@@ -156,7 +163,7 @@ int main (int argc, char *argv[])
 	// Pass control to the application
 	exitCode = appMain (handles);	// No Return from here
 
-	unregister_segmentation_fault_handler ();
+	//unregister_segmentation_fault_handler ();
 
 	exit (exitCode);
 }
@@ -168,8 +175,8 @@ void segmentation_fault_handler (int signum, siginfo_t * info, void *context)
 
 	uiPrintfEx (trERROR, "ERROR: signal %d was trigerred:\n", signum);
 
-	uiPrintfEx (trERROR, "  Fault address: %p\n", info->si_addr);
-
+	//uiPrintfEx (trERROR, "  Fault address: %p\n", info->si_addr);
+#if 0
 	switch (info->si_code)
 	{
 		case SEGV_MAPERR:
@@ -188,9 +195,9 @@ void segmentation_fault_handler (int signum, siginfo_t * info, void *context)
 						info->si_code);
 			break;
 	}
-
+#endif
 	// get pointers for the stack entries
-	size = backtrace (array, CALL_STACK_TRACE_DEPTH);
+	//size = backtrace (array, CALL_STACK_TRACE_DEPTH);
 
 	if (size == 0)
 	{
@@ -202,7 +209,7 @@ void segmentation_fault_handler (int signum, siginfo_t * info, void *context)
 					(size < CALL_STACK_TRACE_DEPTH) ? "" : " (partial)");
 
 		// print out the stack frames symbols to stderr
-		backtrace_symbols_fd (array, size, STDERR_FILENO);
+		//backtrace_symbols_fd (array, size, STDERR_FILENO);
 	}
 
 	/* unregister this handler and let the default action execute */
@@ -217,7 +224,7 @@ void register_segmentation_fault_handler (void)
 	action.sa_flags = SA_SIGINFO;
 	action.sa_sigaction = segmentation_fault_handler;
 	memset (&action.sa_mask, 0, sizeof (action.sa_mask));
-	action.sa_restorer = NULL;
+	//action.sa_restorer = NULL;
 
 	if (sigaction (SIGSEGV, &action, NULL) < 0)
 	{
@@ -232,7 +239,7 @@ void unregister_segmentation_fault_handler (void)
 	action.sa_flags = 0;
 	action.sa_handler = SIG_DFL;
 	memset (&action.sa_mask, 0, sizeof (action.sa_mask));
-	action.sa_restorer = NULL;
+	//action.sa_restorer = NULL;
 
 	sigaction (SIGSEGV, &action, NULL);
 }

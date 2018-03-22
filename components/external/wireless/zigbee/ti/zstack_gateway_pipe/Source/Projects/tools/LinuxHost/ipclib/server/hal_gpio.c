@@ -75,7 +75,7 @@
  **************************************************************************************************/
 
 #ifdef __BIG_DEBUG__
-#define debug_printf(fmt, ...) printf( fmt, ##__VA_ARGS__); fflush(stdout);
+#define debug_printf(fmt, ...) printf( fmt, ##__VA_ARGS__); rtt_fflush(rtt_stdout);
 #else
 #define debug_printf(fmt, ...) st (if (__BIG_DEBUG_ACTIVE == TRUE) printf( fmt, ##__VA_ARGS__);)
 #endif
@@ -109,7 +109,6 @@ extern struct timeval startTime;
 /**************************************************************************************************
  *                                          FUNCTIONS - API
  **************************************************************************************************/
-
 
 /**************************************************************************************************
  * @fn      HalGpioSrdyClose

@@ -301,7 +301,7 @@ void SetPollTimeOut (int delay)
 		// Signal the process to wakeup (come out of poll).
 		union sigval sigVal;
 		sigVal.sival_int = 0;
-		sigqueue (pollPid, SIGUSR1, sigVal);
+		//sigqueue (pollPid, SIGUSR1, sigVal);
 	}
 }
 

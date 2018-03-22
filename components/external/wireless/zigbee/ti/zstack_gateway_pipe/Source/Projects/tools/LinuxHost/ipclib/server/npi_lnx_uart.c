@@ -306,10 +306,6 @@ int NPI_UART_OpenDevice(const char *portName, void *pCfg)
 		npi_ipc_errno = NPI_LNX_ERROR_UART_OPEN_FAILED_RX_THREAD;
 		return NPI_LNX_FAILURE;
 	}
-	else
-	{
-		rt_thread_delay(RT_TICK_PER_SECOND*5);
-	}
 
 	return NPI_LNX_SUCCESS;
 }
@@ -634,6 +630,7 @@ static void *npi_rx_entry(void *ptr)
 
 		do
 		{
+			//rt_kprintf("wtfwtf......\n");
 			readcount = read(npi_fd, readbuf, sizeof(readbuf));
 			if (readcount > 0)
 			{
@@ -652,6 +649,7 @@ static void *npi_rx_entry(void *ptr)
 					ret = NPI_LNX_FAILURE;
 				}
 			}
+			rt_thread_delay(20);
 		} while (readcount > 0);
 
 		if (ret == NPI_LNX_FAILURE)
@@ -1258,12 +1256,13 @@ static void npi_installsig(void)
     {
 		perror("sigaction");
 	}
-
+#if 0
 	/* allow the process to receive SIGIO */
 	if (fcntl(npi_fd, F_SETOWN, getpid()) < 0) 
     {
 		perror("fcntl");
 	}
+#endif
 }
 #endif // #if (defined NPI_UART) && (NPI_UART == TRUE)
 

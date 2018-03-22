@@ -194,6 +194,9 @@ int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)
 #define    SIGIO   23                              /* input/output possible signal */
 #define    SIGPOLL SIGIO                   /* System V name for SIGIO */
 
+#define SA_NOCLDSTOP 0x1        /* Do not generate SIGCHLD when children stop */
+#define SA_SIGINFO   0x2        /* Invoke the signal catching function with */
+
 #define SIGHUP       1
 #define SIGINT       2
 #define SIGQUIT      3
@@ -237,10 +240,22 @@ typedef void (*_sig_func_ptr)(int);
 
 struct sigaction
 {
-	_sig_func_ptr sa_handler;
+	//_sig_func_ptr sa_handler;
 	sigset_t sa_mask;
 	int sa_flags;
+    union
+    {
+        _sig_func_ptr _handler; /* SIG_DFL, SIG_IGN, or pointer to a function */
+#if 1   //defined(_POSIX_REALTIME_SIGNALS)
+        void (*_sigaction) (int, siginfo_t *, void *);
+#endif
+    } _signal_handlers;
 };
+
+#define sa_handler    _signal_handlers._handler                                                            
+#if 1   //defined(_POSIX_REALTIME_SIGNALS)                                                                       
+#define sa_sigaction  _signal_handlers._sigaction                                                          
+#endif                                                                                                     
 
 #define sigaddset(what,sig) (*(what) |= (1<<(sig)), 0)
 #define sigdelset(what,sig) (*(what) &= ~(1<<(sig)), 0)
