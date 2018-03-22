@@ -35,12 +35,6 @@
 #include <pthread.h>
 #endif
 
-#if 1
-struct dfs_fd* dfs_stdin  = RT_NULL;
-struct dfs_fd* dfs_stdout = RT_NULL;
-struct dfs_fd* dfs_stderr = RT_NULL;
-#endif
-
 int libc_system_init(void)
 {
 #if defined(RT_USING_DFS) & defined(RT_USING_DFS_DEVFS)
@@ -70,7 +64,7 @@ int libc_system_init(void)
 INIT_COMPONENT_EXPORT(libc_system_init);
 
 #if 1
-//增加的一些文件操作
+//澧炲姞鐨勪竴浜涙枃浠舵搷浣�
 RTT_FILE * rtt_fopen(const char * path, const char * mode)
 {
   	int flags = 0;
@@ -381,17 +375,17 @@ int rtt_fprintf(RTT_FILE* stream, char* fmt, ...)
         return -1;
     }
 
-    if(stdout!=RT_NULL)
+    if(rtt_stdout!=RT_NULL)
     {
-        if(stream==stdout)
+        if(stream==rtt_stdout)
         {
             rt_kprintf("%s",buffer);
             goto END_OF_OUTPUT;
         }
     }
-    if(stderr!=RT_NULL)
+    if(rtt_stderr!=RT_NULL)
     {
-        if(stream==stderr)
+        if(stream==rtt_stderr)
         {
             rt_kprintf("%s",buffer);
             goto END_OF_OUTPUT;
@@ -419,17 +413,17 @@ int rtt_putc(int ch, RTT_FILE *stream)
         return -1;
     }
 
-    if(stdout!=RT_NULL)
+    if(rtt_stdout!=RT_NULL)
     {
-        if(stream==stdout)
+        if(stream==rtt_stdout)
         {
             rt_kprintf("%c",ch);
             goto END_OF_OUTPUT;
         }
     }
-    if(stderr!=RT_NULL)
+    if(rtt_stderr!=RT_NULL)
     {
-        if(stream==stderr)
+        if(stream==rtt_stderr)
         {
             rt_kprintf("%c",ch);
             goto END_OF_OUTPUT;
@@ -457,17 +451,17 @@ int rtt_fputc(int ch, RTT_FILE *stream)
         return -1;
     }
 
-    if(stdout!=RT_NULL)
+    if(rtt_stdout!=RT_NULL)
     {
-        if(stream==stdout)
+        if(stream==rtt_stdout)
         {
             rt_kprintf("%c",ch);
             goto END_OF_OUTPUT;
         }
     }
-    if(stderr!=RT_NULL)
+    if(rtt_stderr!=RT_NULL)
     {
-        if(stream==stderr)
+        if(stream==rtt_stderr)
         {
             rt_kprintf("%c",ch);
             goto END_OF_OUTPUT;
@@ -495,17 +489,17 @@ int rtt_fputs(const char *s, RTT_FILE *stream)
         return -1;
     }
 
-    if(stdout!=RT_NULL)
+    if(rtt_stdout!=RT_NULL)
     {
-        if(stream==stdout)
+        if(stream==rtt_stdout)
         {
             rt_kprintf("%s",s);
             goto END_OF_OUTPUT;
         }
     }
-    if(stderr!=RT_NULL)
+    if(rtt_stderr!=RT_NULL)
     {
-        if(stream==stderr)
+        if(stream==rtt_stderr)
         {
             rt_kprintf("%s",s);
             goto END_OF_OUTPUT;

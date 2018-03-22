@@ -16,13 +16,9 @@ extern struct dfs_fd* dfs_stdin ;
 extern struct dfs_fd* dfs_stdout;
 extern struct dfs_fd* dfs_stderr;
 
-#undef stdin
-#undef stdout
-#undef stderr
-
-#define stdin   dfs_stdin
-#define stdout  dfs_stdout
-#define stderr  dfs_stderr
+#define rtt_stdin   dfs_stdin
+#define rtt_stdout  dfs_stdout
+#define rtt_stderr  dfs_stderr
 
 /*
 r              open text file for reading

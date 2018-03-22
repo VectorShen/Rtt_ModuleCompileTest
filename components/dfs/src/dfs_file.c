@@ -32,6 +32,10 @@
  * @addtogroup FileApi
  */
 
+struct dfs_fd* dfs_stdin  = RT_NULL;
+struct dfs_fd* dfs_stdout = RT_NULL;
+struct dfs_fd* dfs_stderr = RT_NULL;
+
 /*@{*/
 
 /**
