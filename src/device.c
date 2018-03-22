@@ -49,7 +49,10 @@ rt_err_t rt_device_register(rt_device_t dev,
         return -RT_ERROR;
 
     if (rt_device_find(name) != RT_NULL)
+    {
+    	rt_set_errno(EEXIST);
         return -RT_ERROR;
+    }
 
     rt_object_init(&(dev->parent), RT_Object_Class_Device, name);
     dev->flag = flags;
