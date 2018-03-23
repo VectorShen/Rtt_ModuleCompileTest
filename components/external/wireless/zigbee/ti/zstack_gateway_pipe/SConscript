@@ -5,7 +5,7 @@ path = [GetCurrentDir() + '/../../../../../../components/drivers/include/ipc',
     GetCurrentDir() + '/Source/Projects/zstack/linux/include',
     GetCurrentDir() + '/Source']
 
-define = ['__BIG_DEBUG__', 'PTHREAD_STACK_MIN=4096', 'MAX_BINDING_CLUSTER_IDS=4']
+define = ['__BIG_DEBUG__', 'PTHREAD_STACK_MIN=1024', 'MAX_BINDING_CLUSTER_IDS=4']
 
 components_path = [GetCurrentDir() + '/Source/Components/hal/include',
     GetCurrentDir() + '/Source/Components/zmac',

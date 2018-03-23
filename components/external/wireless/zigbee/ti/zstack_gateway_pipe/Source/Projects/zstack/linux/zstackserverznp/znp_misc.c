@@ -56,7 +56,8 @@
 /*********************************************************************
  * Constants
  */
-
+#undef uiPrintf
+#define uiPrintf	rt_kprintf
 /*********************************************************************
  * Typedefs
  */
@@ -150,7 +151,7 @@ static uint8 sendNPIExpectDefaultStatusSYS (int cmdID, int len, uint8 * pData);
  **************************************************************************************************/
 void sendAPICZNP (int subSys, int cmdID, int len, uint8 * pData)
 {
-	uiPrintfEx (trINFO, "znp_misc sendAPICZNP: subSys:%x, cmdID:%x, len:%d\n",
+	uiPrintfEx(trINFO, "znp_misc sendAPICZNP: subSys:%x, cmdID:%x, len:%d\n",
 				subSys, cmdID, len);
 
 	// send serialized request to API Client synchronously
@@ -178,7 +179,7 @@ uint8 sendNPIExpectDefaultStatusZNP (int subSys, int cmdID, int len,
 	uint16 rsplen;
 	uint8 status = 0;
 
-	uiPrintfEx (trINFO,
+	uiPrintfEx(trINFO, 
 				"znp_misc sendNPIExpectDefaultStatusZNP: subSys:%x, cmdID:%x, len:%d\n",
 				subSys, cmdID, len);
 
@@ -339,7 +340,7 @@ void handleAsyncMsgs (apicHandle_t handle, uint8 subSys, uint8 cmdID,
             case MT_SYS_RESET_IND:
                 {
                     // ZNP Reset, so it lost the MSG callbacks, and EP descriptors
-                    uiPrintfEx (trINFO,
+                    uiPrintf(
                                 "znp_misc handleAsyncMsgs: Reset Indication\n");
 
                     // Register for ZDO Rsp messages
@@ -824,7 +825,7 @@ uint8 osal_nv_read (uint16 id, uint16 ndx, uint16 len, void *buf)
 	pData[1] = HI_UINT16 (id);
 	pData[2] = ndx;
 
-	uiPrintfEx (trINFO, "znp_misc osal_nv_read: id:%x, len:%d\n", id, len);
+	uiPrintfEx(trINFO, "znp_misc osal_nv_read: id:%x, len:%d\n", id, len);
 
 	// send serialized request to NPI synchronously
 	pRsp =
@@ -972,7 +973,7 @@ void znpReset (uint8 mode, uint8 nvReset, uint8 shutdown)
 {
 	uint8 parameter;
 
-	uiPrintfEx (trINFO, "znp_misc znpReset: mode:%d, nvReset:%d, shutdown:%d\n",
+	uiPrintfEx(trINFO, "znp_misc znpReset: mode:%d, nvReset:%d, shutdown:%d\n",
 				mode, nvReset, shutdown);
 
 	if (nvReset)
@@ -990,7 +991,7 @@ void znpReset (uint8 mode, uint8 nvReset, uint8 shutdown)
 		parameter = mode;
 	}
 
-	uiPrintfEx (trINFO, "znp_misc znpReset: parameter:%d\n", parameter);
+	uiPrintfEx(trINFO, "znp_misc znpReset: parameter:%d\n", parameter);
 
 	sendAPICZNP (MT_RPC_SYS_SYS, MT_SYS_RESET_REQ, 1, &parameter);
 }
@@ -1008,7 +1009,7 @@ void znpReset (uint8 mode, uint8 nvReset, uint8 shutdown)
  **************************************************************************************************/
 uint8 znpSniffer (uint8 mode)
 {
-	uiPrintfEx (trINFO, "znp_misc znpSniffer: mode:%d\n", mode);
+	uiPrintfEx(trINFO, "znp_misc znpSniffer: mode:%d\n", mode);
 
 	return (sendNPIExpectDefaultStatusZNP (MT_RPC_SYS_SYS,
 										 MT_SYS_SNIFFER_PARAMETERS, 1,

@@ -68,7 +68,7 @@ extern uint32_t default_trace_enable_mask;
     { \
             if (1) \
             { \
-                rt_kprintf("[%s/%s] %s: " fmt, to_string(SERVER_NAME), SPECIFIC_THREAD_NAME(), TRACE_LEVEL_NAME[trace_group], ##__VA_ARGS__); \
+                rt_kprintf("[%s/%s] : " fmt, to_string(SERVER_NAME), TRACE_LEVEL_NAME[trace_group], ##__VA_ARGS__); \
                 rtt_fflush(rtt_stdout); \
             } \
     } while (0)

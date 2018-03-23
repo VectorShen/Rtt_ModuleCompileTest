@@ -67,6 +67,9 @@
 #define NPI_LNX_ERROR_MODULE(a)		 ((uint8)((a & 0xFF00) >> 8))
 #define NPI_LNX_ERROR_THREAD(a)		 ((uint8)(a & 0x00FF))
 
+#undef uiPrintf
+#define uiPrintf	rt_kprintf
+
 /*********************************************************************
  * CONSTANTS
  */
@@ -161,6 +164,7 @@ static pfnAPISMsgCB apisMsgCB = NULL;
 
 static apic16BitLenMsgHdr_t apisHdrBuf;
 static char listenReadPipePathName[APIC_READWRITE_PIPE_NAME_LEN];
+static char listenReadPipePathBuffer[APIC_READWRITE_PIPE_NAME_LEN];
 /*********************************************************************
  * LOCAL PROTOTYPES
  */
@@ -194,8 +198,6 @@ bool APIS_Init( emServerId serverId, bool verbose, pfnAPISMsgCB pfCB )
 
 	apisMsgCB = pfCB;
 
-    printf(" serverId is %d.\n",id);
-
 	if ( verbose )
 	{
 		startupInfo();
@@ -224,8 +226,6 @@ bool APIS_Init( emServerId serverId, bool verbose, pfnAPISMsgCB pfCB )
 	{
 		uiPrintf( "waiting for connect pipe on #%d...\n", listenPipeReadHndl );
 	}
-
-    printf(" serverId is %d.\n",id);
 
 	// iCreate thread for listening
 	if ( pthread_create( &listeningThreadId, &attr, apislisteningThreadFunc,
@@ -627,11 +627,13 @@ static int createReadWritePipes( emServerId serverId )
 	{
 		printf ("cannot create fifo %s\n", listenReadPipePathName);
 	}
-	//闂傚牏鍋ゅΟ鍡樼箙閻愭潙鈪电�殿噯鎷烽悹鍥吹椤撴悂鏌嗛幙鍕闁告劖鐟ч鎼佹焼閹捐埖鐣遍柟鍨尭缁辨垹鎲版担铏规惣閻犲洩宕甸鎼佹焼閹炬潙澶嶉柡锟界捄鍝勭厒闁轰胶澧楀畵渚�宕樺鍡樻儥濞达綇鎷�
-	listenPipeReadHndl = open (listenReadPipePathName, O_RDONLY | O_NONBLOCK, 0);
+	memset(listenReadPipePathBuffer, '\0', APIC_READWRITE_PIPE_NAME_LEN);
+	sprintf(listenReadPipePathBuffer, "%s%s", FIFO_PATH_PREFIX, listenReadPipePathName);
+	//闂傚倸鐗忛崑銈呂熼崱妯肩畽闁绘劖娼欓埅鐢碉拷娈垮櫙閹风兘鎮归崶顏勫惞妞ゆ挻鎮傞弻鍡涘箼閸曨厾顦梺鍛婂姈閻熝囶敇閹间焦鐒奸柟鎹愬煐閻ｉ亶鏌熼崹顐ｅ碍缂佽鲸鍨归幉鐗堟媴閾忚鎯ｉ柣鐘叉穿瀹曠敻顢橀幖浣圭劶闁圭偓娼欐径宥夋煛閿熺晫鎹勯崫鍕帓闂佽桨鑳舵晶妤�鐣垫笟锟藉畷妯侯吋閸℃ɑ鍎ユ繛杈剧秶閹凤拷
+	listenPipeReadHndl = open (listenReadPipePathBuffer, ZB_LISTEN_PIPE_OPEN_FLAG, 0);
 	if (listenPipeReadHndl == -1)
 	{
-		printf ("open %s for read error\n", listenReadPipePathName);
+		printf ("open %s for read error\n", listenReadPipePathBuffer);
 		exit (-1);
 	}
 
@@ -667,8 +669,6 @@ void *apislisteningThreadFunc( void *ptr )
 	struct timeval *pTimeout = NULL;
 	char listen_buf[SERVER_LISTEN_BUF_SIZE];
 
-	printf("serverId is %d.\n", id);
-
 	char tmpReadPipeName[TMP_PIPE_NAME_SIZE];
 	char tmpWritePipeName[TMP_PIPE_NAME_SIZE];
     char readPipePathName[APIS_READWRITE_PIPE_NAME_LEN];
@@ -703,8 +703,6 @@ void *apislisteningThreadFunc( void *ptr )
             break;
     }
 
-	printf("server id is %d.\n", id);
-
 	trace_init_thread("LSTN");
 	//
 	do
@@ -732,7 +730,7 @@ void *apislisteningThreadFunc( void *ptr )
 			{
                 if( c == listenPipeReadHndl )
                 {
-					//闁规亽鍎查弫鍦拷骞垮灪閸╂稓绮╅婊庡悁闂侇剚鎸惧▓鎴﹀极閻楀牆绁�
+					//闂佽浜介崕鏌ュ极閸︻叏鎷烽獮鍨仾闁糕晜绋撶划鈺咁敍濠婂骸鎮侀梻渚囧墯閹告儳鈻撻幋锕�鏋侀柣妤�鐗嗙粊锟�
 					memset(listen_buf,'\0',SERVER_LISTEN_BUF_SIZE);
 					n = read( listenPipeReadHndl, listen_buf, SERVER_LISTEN_BUF_SIZE );
 					if ( n <= 0 )
@@ -804,9 +802,9 @@ void *apislisteningThreadFunc( void *ptr )
                         }
 						if( ret == APIS_LNX_SUCCESS )
 						{
-							//闁哄嫷鍨遍婊呮兜椤旂偓鐣遍悗骞垮灪閸╂稓绮╅婊庡悁闂侇剚鎹佺换娑㈠箳閵夛附娈堕柟鐧告嫹
-							//闁瑰灚鎸哥槐鎴﹀礃濞嗘埈鍚�闂侇剚鎼槐婵嬪礃濞嗗繐寮抽柡浣哄瀹撲線鏁嶇仦鍊熷珯闁瑰灚鎸哥槐鎴︽儎缁嬭法瀹夌紓鍌涚墪瑜拌法绮婚敓鐘卞闁汇劌瀚浼村礃濞嗘劕浼庨弶鈺傚椤戜線鏁嶇仦钘夘潱闁稿浚娅杁 select闁汇劌瀚敮鍫曞礆閸洖娅�
-                            //闂傚啳顕ч、锝夊箥閹惧磭纾婚柨娑樼焸濡茶顫㈤～顓犵憹闁告艾鐭佺换妯肩矙鐎ｎ厾绠ラ悶娑樿嫰閹烩晠骞堥姀銈嗭紪濡府鎷�
+							//闂佸搫瀚烽崹閬嶎敆濠婂懏鍏滄い鏃傚亾閻ｉ亶鎮楅獮鍨仾闁糕晜绋撶划鈺咁敍濠婂骸鎮侀梻渚囧墯閹逛胶鎹㈠☉銏犵闁靛闄勫▓鍫曟煙閻у憡瀚�
+							//闂佺懓鐏氶幐鍝ユ閹达箑绀冩繛鍡樺焾閸氾拷闂備緡鍓氶幖顐ゆ濠靛绀冩繛鍡楃箰瀵娊鏌℃担鍝勵暭鐎规挷绶氶弫宥囦沪閸婄喎鐝梺鐟扮仛閹稿摜妲愰幋锔藉剮缂佸娉曠�瑰绱撻崒娑氬ⅹ鐟滄媽娉曠划濠氭晸閻樺崬顥氶梺姹囧妼鐎氼垶顢氭导鏉戠婵炲棙鍔曟导搴ㄥ级閳哄倸顥嬫い鎴滅窔閺佸秶浠﹂挊澶樻奖闂佺娴氬▍鏉� select闂佹眹鍔岀�氼厾鏁崼鏇炵闁割偅娲栧▍锟�
+                            //闂傚倸鍟抽褔銆侀敐澶婄闁规儳纾壕濠氭煥濞戞鐒告俊鑼额嚙椤垽锝為鐘垫喒闂佸憡鑹鹃惌浣烘崲濡偐鐭欓悗锝庡幘缁犮儵鎮跺☉妯垮闁圭儵鏅犻獮鍫ュ閵堝棴绱俊顐㈠簻閹凤拷
 							printf("writePipePathName is %s.\n", writePipePathName);
 							listenPipeWriteHndl=open(writePipePathName, O_WRONLY, 0);
 							if(listenPipeWriteHndl==-1)
@@ -820,7 +818,7 @@ void *apislisteningThreadFunc( void *ptr )
 							}
                             sprintf(assignedId,"%d",api_server_clientsNum);
 
-							//闁哄洤鐡ㄩ弻濠勭不閿熺姳澹曢柡鍌氭矗濞嗐垽宕ラ敓锟�
+							//闂佸搫娲ら悺銊╁蓟婵犲嫮涓嶉柨鐔哄С婢规洟鏌￠崒姘煑婵炲棎鍨藉畷銉╂晸閿燂拷
 							memset(tmpReadPipeName, '\0', TMP_PIPE_NAME_SIZE);
 							memset(tmpWritePipeName, '\0', TMP_PIPE_NAME_SIZE);
 							sprintf(tmpReadPipeName, "%s%d", readPipePathName, api_server_clientsNum);
@@ -828,7 +826,7 @@ void *apislisteningThreadFunc( void *ptr )
 
                             api_server_clientsNum++;
                             
-							//闂傚牏鍋ゅΟ鍡樼箙閻愭彃鐏＄�点倛娅ｉ鎼佹焼閿燂拷
+							//闂傚倸鐗忛崑銈呂熼崱妯肩畽闁绘劖褰冮悘锛勶拷鐐瑰�涘▍锝夘敇閹间焦鐒奸柨鐕傛嫹
 							if((mkfifo(tmpReadPipeName,O_CREAT|O_EXCL)<0)&&(errno!=EEXIST))
 							{
 								printf("cannot create fifo %s\n", tmpReadPipeName);
@@ -837,7 +835,7 @@ void *apislisteningThreadFunc( void *ptr )
 							{
 								printf("cannot create fifo %s\n", tmpWritePipeName);
 							}	
-							//闂傚牏鍋ゅΟ鍡樼箙閻愭潙鈪电�殿噯鎷烽悹鍥吹椤撴悂鏌嗛敓锟�
+							//闂傚倸鐗忛崑銈呂熼崱妯肩畽闁绘劖娼欓埅鐢碉拷娈垮櫙閹风兘鎮归崶顏勫惞妞ゆ挻鎮傞弻鍡涙晸閿燂拷
 							tmpReadPipe = open(tmpReadPipeName, O_RDONLY|O_NONBLOCK, 0);
 							if(tmpReadPipe == -1)
 							{
@@ -846,10 +844,10 @@ void *apislisteningThreadFunc( void *ptr )
 								break;
 							}
 							
-                            //闁告劖鐟ラ崣鍡涙儎閹存繃鍎旂紒鐙呯節娴滐拷
+                            //闂佸憡鍔栭悷銉╁矗閸℃稒鍎庨柟瀛樼箖閸庢梻绱掗悪鍛瘈濞存粣鎷�
 							write(listenPipeWriteHndl, assignedId, strlen(assignedId));
 
-							//闂傚啳顕ч、锝夊箥閹惧磭纾婚柛鎰懅椤撴悂鏌嗛敓锟�
+							//闂傚倸鍟抽褔銆侀敐澶婄闁规儳纾壕濠氭煕閹邦厾鎳呮い鎾存倐閺屽棝鏁撻敓锟�
 							tmpWritePipe = open(tmpWritePipeName, O_WRONLY, 0);
 							if(tmpWritePipe == -1)
 							{
@@ -857,7 +855,7 @@ void *apislisteningThreadFunc( void *ptr )
 								ret = APIS_LNX_FAILURE;
 								break;
 							}
-							//閻犲洩顕ч崯鎾剁不閿熺姳澹曢柟璇茬箺閸亞绮敃锟芥慨鐐哄礂閵夈儱鐓俛ctivelist濞戞搫鎷�
+							//闁荤姴娲╅褔宕幘鍓佷笉闁跨喓濮虫竟鏇㈡煙鐠囪尙绠洪柛顐簽缁參鏁冮敓鑺ユ叏閻愬搫绀傞柕澶堝劚閻撲繘ctivelist婵炴垶鎼幏锟�
 							ret = addToActiveList(tmpReadPipe, tmpWritePipe);
 							if ( ret != APIS_LNX_SUCCESS )
 							{
@@ -876,7 +874,7 @@ void *apislisteningThreadFunc( void *ptr )
 
 								apisMsgCB( searchWritePipeFromReadPipe(tmpReadPipe), 0, 0, 0, NULL, SERVER_CONNECT );
 							}
-							//闁稿繑濞婂Λ鎾儎閹存繃鍎旈柡鍐ㄥ濞堟垿宕樺▎鎴悁闂侇剨鎷�
+							//闂佺绻戞繛濠偽涢幘顔藉剮闁瑰瓨绻冮崕鏃堟煛閸愩劌顣虫繛鍫熷灴瀹曟ê鈻庨幋顓炴倎闂備緡鍓ㄩ幏锟�
 							close(listenPipeWriteHndl);
 						}
                         else

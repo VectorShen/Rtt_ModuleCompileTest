@@ -90,12 +90,12 @@ char* zlsznp_srv_args[3]=
 	"srv_npi_ipc",
 	"/config.ini"
 };
-
 /**************************************************************************************************
  **************************************************************************************************/
 
 int srv_main (int argc, char *argv[])
 {
+
 	int exitCode = 0;
 
 	processUint32Flag ("--verbose", "-v", &default_trace_enable_mask, &argc,
@@ -121,7 +121,7 @@ int srv_main (int argc, char *argv[])
 	}
 
 	pAPIS_SysParams = appInit ();
-	printf(" serverId is %d.\n",pAPIS_SysParams->serverId);
+
 	if (pAPIS_SysParams == NULL)
 	{
 		uiPrintf ("\nApp initialization problem - exiting!!\n\n");
@@ -153,8 +153,6 @@ int srv_main (int argc, char *argv[])
 		handles[i] = apicInit (argv[1 + i],	// the IP address and port to a TCP Server
 								 DISPLAY_VERSION, pAPIS_SysParams->pfNPICB);
 	}
-
-    printf(" serverId is %d.\n",pAPIS_SysParams->serverId);
 
 	// iSetup the API Server
 	APIS_Init (pAPIS_SysParams->serverId, pAPIS_SysParams->serverVerbose,

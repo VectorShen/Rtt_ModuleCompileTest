@@ -266,7 +266,7 @@ int __DEBUG_TIME_ACTIVE = FALSE;		// Do not enable by default.
 int listenPipeReadHndl;
 int listenPipeWriteHndl;
 
-int clientsNum = 1;
+int clientsNum = 0;
 
 // Socket connection file descriptors
 fd_set activePipesFDs;
@@ -984,177 +984,6 @@ void npi_rtt_ipc_main(void* args)
 
 	while (ret == NPI_LNX_SUCCESS)
 	{
-#if USE_RTT_PIPE_SELECT_STD
-        FD_ZERO(&activePipesFDs);
-        FD_SET (listenPipeReadHndl, &activePipesFDs);
-        // First use select to find activity on the sockets
-        if ((select_ret = select (fdmax + 1, &activePipesFDs, NULL, NULL, &t))< 0)
-        {
-            if (errno != EINTR)
-            {
-                rt_kprintf("select error\n");
-                break;
-            }
-            continue;
-        }
-        else if(select_ret == 0)
-        {
-            /* timeout */
-            timeout_cnt--;
-            if(timeout_cnt == 0)
-            {
-            	rt_kprintf("select timeout.\n");
-                break;
-            }
-        }
-        else
-        {
-			// Then process this activity
-			if (FD_ISSET(listenPipeReadHndl, &activePipesFDs))
-			{
-				//接收客户端管道的数据
-				n = read (listenPipeReadHndl, listen_buf, SERVER_LISTEN_BUF_SIZE);
-				if (n <= 0)
-				{
-					rt_kprintf("read failed for n <= 0\n");
-					if (n < 0)
-					{
-						rt_kprintf("NPI_LNX_ERROR_IPC_RECV_DATA_CHECK_ERRNO\n");
-					}
-					else
-					{
-						rt_kprintf("NPI_LNX_ERROR_IPC_RECV_DATA_DISCONNECT\n");
-						close(listenPipeReadHndl);
-						FD_CLR(listenPipeReadHndl, &activePipesFDs);
-						listenPipeReadHndl=open(npi_ipc_read_fifo_path, ZB_LISTEN_PIPE_OPEN_FLAG, 0);
-					    if(listenPipeReadHndl==-1)
-					    {
-					    	rt_kprintf("open %s for read error\n", npi_ipc_read_fifo_path);
-					    }
-					    else
-					    {
-					    	printf("open npi_ipc_listen_read_fifo ok with fd = %d.\n", listenPipeReadHndl);
-					        fdmax = listenPipeReadHndl;
-					    }
-					}
-				}
-				else
-				{
-					ret = NPI_LNX_IPC_ConnectionHandle(c);
-					if (ret == NPI_LNX_SUCCESS)
-					{
-						// Everything is ok
-					}
-					else
-					{
-						uint8 childThread;
-						switch (npi_ipc_errno)
-						{
-                            case NPI_LNX_ERROR_IPC_RECV_DATA_DISCONNECT:
-                                printf("Removing connection #%d\n", c);
-                                // Connection closed. Remove from set
-                                FD_CLR(c, &activePipesFDs);
-                                // We should now set ret to NPI_SUCCESS, but there is still one fatal error
-                                // possibility so simply set ret = to return value from removeFromActiveList().
-                                ret = removeFromActiveList(c);
-                                sprintf(toNpiLnxLog, "Removed connection #%d", c);
-                                //							printf("%s\n", toNpiLnxLog);
-                                writeToNpiLnxLog(toNpiLnxLog);
-                                break;
-                            case NPI_LNX_ERROR_UART_SEND_SYNCH_TIMEDOUT:
-                                //This case can happen in some particular condition:
-                                // if the network is in BOOT mode, it will not answer any synchronous request other than SYS_BOOT request.
-                                // if we exit immediately, we will never be able to recover the NP device.
-                                // This may be replace in the future by an update of the RNP behavior
-                                printf("Synchronous Request Timeout...");
-                                sprintf(toNpiLnxLog, "Removed connection #%d", c);
-                                //							printf("%s\n", toNpiLnxLog);
-                                writeToNpiLnxLog(toNpiLnxLog);
-                                ret = NPI_LNX_SUCCESS;
-                                npi_ipc_errno = NPI_LNX_SUCCESS;
-                                break;
-                            default:
-                                if (npi_ipc_errno == NPI_LNX_SUCCESS)
-                                {
-                                    // Do not report and abort if there is no real error.
-                                    ret = NPI_LNX_SUCCESS;
-                                }
-                                else if (NPI_LNX_ERROR_JUST_WARNING(npi_ipc_errno))
-                                {
-                                    // This may be caused by an unexpected reset. Write it to the log,
-                                    // but keep going.
-                                    // Everything about the error can be found in the message, and in npi_ipc_errno:
-                                    childThread = ((npiMsgData_t *) npi_ipc_buf[0])->cmdId;
-                                    sprintf(toNpiLnxLog, "Child thread with ID %d in module %d reported error:\t%s",
-                                            NPI_LNX_ERROR_THREAD(childThread),
-                                            NPI_LNX_ERROR_MODULE(childThread),
-                                            (char *)(((npiMsgData_t *) npi_ipc_buf[0])->pData));
-                                    //							printf("%s\n", toNpiLnxLog);
-                                    writeToNpiLnxLog(toNpiLnxLog);
-                                    // Force continuation
-                                    ret = NPI_LNX_SUCCESS;
-                                }
-                                else
-                                {
-                                    //							debug_
-                                    printf("[ERR] npi_ipc_errno 0x%.8X\n", npi_ipc_errno);
-                                    // Everything about the error can be found in the message, and in npi_ipc_errno:
-                                    childThread = ((npiMsgData_t *) npi_ipc_buf[0])->cmdId;
-                                    sprintf(toNpiLnxLog, "Child thread with ID %d in module %d reported error:\t%s",
-                                            NPI_LNX_ERROR_THREAD(childThread),
-                                            NPI_LNX_ERROR_MODULE(childThread),
-                                            (char *)(((npiMsgData_t *) npi_ipc_buf[0])->pData));
-                                    //							printf("%s\n", toNpiLnxLog);
-                                    writeToNpiLnxLog(toNpiLnxLog);
-                                }
-                                break;
-						}
-
-						// Check if error requested a reset
-						if (NPI_LNX_ERROR_RESET_REQUESTED(npi_ipc_errno))
-						{
-							// Yes, utilize server control API to reset current device
-							// Do it by reconnecting so that threads are kept synchronized
-							npiMsgData_t npi_ipc_buf_tmp;
-							int localRet = NPI_LNX_SUCCESS;
-							printf("Reset was requested, so try to disconnect device %d\n", devIdx);
-							npi_ipc_buf_tmp.cmdId = NPI_LNX_CMD_ID_DISCONNECT_DEVICE;
-							localRet = npi_ServerCmdHandle((npiMsgData_t *)&npi_ipc_buf_tmp);
-							printf("Disconnection from device %d was %s\n", devIdx, (localRet == NPI_LNX_SUCCESS) ? "successful" : "unsuccessful");
-							if (localRet == NPI_LNX_SUCCESS)
-							{
-								printf("Then try to connect device %d again\n", devIdx);
-								int bigDebugWas = __BIG_DEBUG_ACTIVE;
-								if (bigDebugWas == FALSE)
-								{
-									__BIG_DEBUG_ACTIVE = TRUE;
-									printf("__BIG_DEBUG_ACTIVE set to TRUE\n");
-								}
-								npi_ipc_buf_tmp.cmdId = NPI_LNX_CMD_ID_CONNECT_DEVICE;
-								localRet = npi_ServerCmdHandle((npiMsgData_t *)&npi_ipc_buf_tmp);
-								printf("Reconnection to device %d was %s\n", devIdx, (localRet == NPI_LNX_SUCCESS) ? "successful" : "unsuccessful");
-								if (bigDebugWas == FALSE)
-								{
-									__BIG_DEBUG_ACTIVE = FALSE;
-									printf("__BIG_DEBUG_ACTIVE set to FALSE\n");
-								}
-							}
-						}
-
-						// If this error was sent through socket; close this connection
-						if (((uint8) (((npiMsgData_t *) npi_ipc_buf[0])->subSys) & (uint8) RPC_CMD_TYPE_MASK) == RPC_CMD_NOTIFY_ERR)
-						{
-							printf("Removing connection #%d\n", c);
-							// Connection closed. Remove from set
-							FD_CLR(c, &activePipesFDs);
-                            ret = removeFromActiveList(c);
-                            sprintf(toNpiLnxLog, "Removed connection #%d", c);
-						}
-					}
-				}
-			}
-        }
-#else
 		activePipesFDsSafeCopy = activePipesFDs;
 
 		// First use select to find activity on the sockets
@@ -1233,10 +1062,8 @@ void npi_rtt_ipc_main(void* args)
                         	sprintf(assignedId,"%d",clientsNum);
                         	memset (tmpReadPipeName, '\0', TMP_PIPE_NAME_SIZE);
                         	memset (tmpWritePipeName, '\0', TMP_PIPE_NAME_SIZE);
-                        	sprintf(tmpReadPipeName, "%s%s%d", FIFO_PATH_PREFIX, NPI_IPC_LISTEN_PIPE_CLIENT2SERVER, clientsNum);
-                        	sprintf(tmpWritePipeName, "%s%s%d", FIFO_PATH_PREFIX, NPI_IPC_LISTEN_PIPE_SERVER2CLIENT, clientsNum);
-
-                        	clientsNum++;
+                        	sprintf(tmpReadPipeName, "%s%d", NPI_IPC_LISTEN_PIPE_CLIENT2SERVER, clientsNum);
+                        	sprintf(tmpWritePipeName, "%s%d", NPI_IPC_LISTEN_PIPE_SERVER2CLIENT, clientsNum);
 
                         	if ((mkfifo (tmpReadPipeName, O_CREAT | O_EXCL) < 0) && (errno != EEXIST))
                         	{
@@ -1247,6 +1074,11 @@ void npi_rtt_ipc_main(void* args)
                             	printf ("cannot create fifo %s\n", tmpWritePipeName);
                         	}
 
+                        	memset (tmpReadPipeName, '\0', TMP_PIPE_NAME_SIZE);
+                        	memset (tmpWritePipeName, '\0', TMP_PIPE_NAME_SIZE);
+                        	sprintf(tmpReadPipeName, "%s%s", FIFO_PATH_PREFIX, NPI_IPC_LISTEN_PIPE_CLIENT2SERVER, clientsNum);
+                        	sprintf(tmpWritePipeName, "%s%s", FIFO_PATH_PREFIX, NPI_IPC_LISTEN_PIPE_SERVER2CLIENT, clientsNum);
+
                         	tmpReadPipe = open (tmpReadPipeName, ZB_READ_PIPE_OPEN_FLAG, 0);
                         	if (tmpReadPipe == -1)
                         	{
@@ -1254,8 +1086,6 @@ void npi_rtt_ipc_main(void* args)
                             	ret = NPI_LNX_FAILURE;
                             	break;
                         	}
-
-							write(listenPipeWriteHndl, assignedId, strlen(assignedId));
 
                         	tmpWritePipe = open (tmpWritePipeName, O_WRONLY, 0);
                         	if (tmpWritePipe == -1)
@@ -1282,7 +1112,8 @@ void npi_rtt_ipc_main(void* args)
                                 	fdmax = tmpReadPipe;
                             	}
                         	}
-
+                        	clientsNum++;
+							write(listenPipeWriteHndl, assignedId, strlen(assignedId));
                         	close (listenPipeWriteHndl);
 							#ifdef __DEBUG_TIME__
                         	if (__DEBUG_TIME_ACTIVE == TRUE)
@@ -1414,7 +1245,6 @@ void npi_rtt_ipc_main(void* args)
 				}
 			}
 		}
-#endif
 	}
 	free(toNpiLnxLog);
 
@@ -2693,6 +2523,41 @@ static int npi_ServerCmdHandle(npiMsgData_t *pNpi_ipc_buf)
 	return ret;
 }
 
+#ifdef RT_USING_COMPONENTS_DRIVERS_PIPE_TEST_NPI_IPC
+void npi_rtt_ipc_pipe_main(void* args)
+{
+	int  fd;
+	int  ret_size;
+
+	fd=open("/dev/npi_ipc_c2s", O_WRONLY, 0);
+	if(fd==-1)
+	{
+		if(errno==ENXIO)
+		{
+			rt_kprintf("open /dev/npi_ipc_c2s for write error; no reading process\n");
+		}
+	}
+	else
+	{
+		rt_kprintf("open pipe for write ok.\n");
+	}
+	while(1)
+	{
+		ret_size=write(fd,NPI_IPC_LISTEN_PIPE_CHECK_STRING,strlen(NPI_IPC_LISTEN_PIPE_CHECK_STRING));
+		if(ret_size==-1)
+		{
+			rt_kprintf("pipe write return value is %d.\n", ret_size);
+			if(errno==EAGAIN)
+				rt_kprintf("write to fifo error; try later\n");
+		}
+		else
+		{
+			rt_kprintf("real write num is %d\n",ret_size);
+		}
+		rt_thread_delay(10*RT_TICK_PER_SECOND);
+	}
+}
+#endif /* npi_ipc_pipe_thread */
 /**************************************************************************************************
  **************************************************************************************************/
 

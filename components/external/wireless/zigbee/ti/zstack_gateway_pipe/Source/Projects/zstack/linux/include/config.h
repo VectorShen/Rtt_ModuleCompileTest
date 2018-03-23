@@ -43,6 +43,7 @@
 #define SERVER_LISTEN_BUF_SIZE			        30
 
 #define ZB_LISTEN_PIPE_OPEN_FLAG				(O_RDWR | O_NONBLOCK)
+#define ZB_CLIENT_LISTEN_PIPE_READ_FLAG			(O_RDWR)
 #define ZB_READ_PIPE_OPEN_FLAG					(O_RDWR | O_NONBLOCK)
 
 typedef enum

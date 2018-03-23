@@ -73,8 +73,6 @@
 /**************************************************************************************************
  * Typedefs
  **************************************************************************************************/
-#undef uiPrintf
-#define uiPrintf	rt_kprintf
 
 #ifdef API_CLIENT_8BIT_LEN
 typedef apic8BitLenMsgHdr_t apicMsgHdr_t;
@@ -331,7 +329,7 @@ apicHandle_t apicInit( const char *srvName, bool getVer, pfnAsyncMsgCb pFn )
 	memset(npi_ipc_read_fifo_path, '\0', FIFO_PATH_BUFFER_LEN);
 	sprintf(npi_ipc_read_fifo_path, "%s%s", FIFO_PATH_PREFIX, readPipePathName);
 
-    tmpReadPipe = open(npi_ipc_read_fifo_path, O_RDONLY, 0);
+    tmpReadPipe = open(npi_ipc_read_fifo_path, ZB_CLIENT_LISTEN_PIPE_READ_FLAG, 0);
     if(tmpReadPipe == -1)
     {
         //error
@@ -339,10 +337,13 @@ apicHandle_t apicInit( const char *srvName, bool getVer, pfnAsyncMsgCb pFn )
     }
 
     readWriteNum = read(tmpReadPipe, assignedIdBuf, APIC_READ_ASSIGNED_ID_BUF_LEN);
-	uiPrintf("readWriteNum is %d.\n",readWriteNum);
     if(readWriteNum<=0)
     {
         //error
+    }
+    else
+    {
+        uiPrintf("readWriteNum is %d.\n",readWriteNum);
     }
 
     strcat(readPipePathName,assignedIdBuf);
@@ -693,7 +694,7 @@ uint8 *apicSendSynchData( apicHandle_t handle, uint8 subSys, uint8 cmdId,
 				i++ )
 		{
 			//GUNCOM Need to fix this issue, cannot comment out line belo
-			//uiPrintfEx(trINFO, "0x%.2X\n",(unsigned int)((uint8 *)(pInstance->srsp_msg + 1)[i]) );
+			//uiPrintf( "0x%.2X\n",(unsigned int)((uint8 *)(pInstance->srsp_msg + 1)[i]) );
 			uiPrintfEx(trINFO, "0x%.2X\n", ((uint8 *)(&(pInstance->srsp_msg[1])))[i]);
 		}
 
@@ -826,7 +827,7 @@ void apicSendAsynchData( apicHandle_t handle, uint8 subSys, uint8 cmdId,
 			cmdId );
 	for ( i = 0; i < len; i++ )
 	{
-		uiPrintfEx(trINFO," 0x%.2X", pData[i] );
+		uiPrintfEx(trINFO, " 0x%.2X", pData[i] );
 	}
 
 	ptr = (uint8 *) hdr;
@@ -1012,7 +1013,7 @@ static void *SISreadThreadFunc( void *ptr )
 				if ( n == pMsg->len )
 				{
 					int i;
-					uiPrintfEx(trINFO,"Received %d bytes,\t subSys 0x%.2X,"\
+					uiPrintfEx(trINFO, "Received %d bytes,\t subSys 0x%.2X,"\
 							" cmdId 0x%.2X, pData:\n",\
 							pMsg->len, pMsg->subSys, pMsg->cmdId );
 					for ( i = 0; i < n; i++ )
@@ -1020,7 +1021,7 @@ static void *SISreadThreadFunc( void *ptr )
 						//GUNCOM Need to fix this print statement, gives error
 						//uiPrintfEx(trINFO, " 0x%.2X\n", (uint8)((uint8 *)(pMsg+1)[i]) );
 						//uiPrintfEx(trINFO, " 0x%X\n", (uint8)((uint8 *)(pMsg+1)[i]) );
-						uiPrintfEx(trINFO, " 0x%X\n",	((uint8 *)(&pMsg[1]))[i]	); 
+						uiPrintfEx(trINFO, " 0x%X\n",	((uint8 *)(&pMsg[1]))[i]	);
 					}
 
 					if ( (pMsg->subSys & RPC_CMD_TYPE_MASK) == RPC_CMD_SRSP )
@@ -1049,7 +1050,7 @@ static void *SISreadThreadFunc( void *ptr )
 					}
 					else if ( (pMsg->subSys & RPC_CMD_TYPE_MASK) == RPC_CMD_AREQ )
 					{
-						uiPrintfEx(trINFO, "RPC_CMD_AREQ cmdId: 0x%.2X\n", pMsg->cmdId );
+						uiPrintf( "RPC_CMD_AREQ cmdId: 0x%.2X\n", pMsg->cmdId );
 
 						pInstance->areqRxMsgCount++;
 						uiPrintfEx(trINFO, "\n[DBG] Allocated \t@ 0x%.16X"\
