@@ -41,7 +41,7 @@
 #ifndef AIC_H
 #define AIC_H
 
-#include "hal_rpc.h"
+#include "common/hal_rpc.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -49,8 +49,7 @@ extern "C"
  * INCLUDES
  */
 
-//#include "hal_board.h"
-#include "hal_types.h"
+#include "common/hal_types.h"
 #include "hal_gpio.h"
 
 

@@ -56,8 +56,8 @@ extern "C" {
 #pragma pack(1)
 #endif
 
-  /////////////////////////////////////////////////////////////////////////////
-  // Typedefs
+/////////////////////////////////////////////////////////////////////////////
+// Typedefs
 
 PACK_1 typedef struct ATTR_PACKED
 {
@@ -65,94 +65,94 @@ PACK_1 typedef struct ATTR_PACKED
     uint8 flowcontrol;
 } npiUartCfg_t;
 
-  /////////////////////////////////////////////////////////////////////////////
-  // globals
+/////////////////////////////////////////////////////////////////////////////
+// globals
 
-  /////////////////////////////////////////////////////////////////////////////
-  // Interface function prototypes
+/////////////////////////////////////////////////////////////////////////////
+// Interface function prototypes
 
-  /******************************************************************************
-   * @fn         NPI_UART_OpenDevice
-   *
-   * @brief      This function establishes a serial communication connection with
-   *             a network processor device.
-   *             As windows machine does not have a single dedicated serial
-   *             interface, this function will designate which serial port shall
-   *             be used for communication.
-   *
-   * input parameters
-   *
-   * @param      portName � name of the serial port
-   * @param		 pCfg	- pointer to configuration parameters
-   *
-   * output parameters
-   *
-   * None.
-   *
-   * @return     TRUE if the connection is established successfully.
-   *             FALSE, otherwise.
-   ******************************************************************************
-   */
-  extern int NPI_UART_OpenDevice(const char *portName, void *pCfg);
+/******************************************************************************
+* @fn         NPI_UART_OpenDevice
+*
+* @brief      This function establishes a serial communication connection with
+*             a network processor device.
+*             As windows machine does not have a single dedicated serial
+*             interface, this function will designate which serial port shall
+*             be used for communication.
+*
+* input parameters
+*
+* @param      portName 锟� name of the serial port
+* @param		 pCfg	- pointer to configuration parameters
+*
+* output parameters
+*
+* None.
+*
+* @return     TRUE if the connection is established successfully.
+*             FALSE, otherwise.
+******************************************************************************
+*/
+extern int NPI_UART_OpenDevice(const char *portName, void *pCfg);
 
-  /******************************************************************************
-   * @fn         NPI_CloseDevice
-   *
-   * @brief      This function closes connection with a network processor device
-   *
-   * input parameters
-   *
-   * @param      pDevice   - pointer to a device data structure
-   *
-   * output parameters
-   *
-   * None.
-   *
-   * @return     None
-   ******************************************************************************
-   */
-  extern void NPI_UART_CloseDevice(void);
+/******************************************************************************
+* @fn         NPI_CloseDevice
+*
+* @brief      This function closes connection with a network processor device
+*
+* input parameters
+*
+* @param      pDevice   - pointer to a device data structure
+*
+* output parameters
+*
+* None.
+*
+* @return     None
+******************************************************************************
+*/
+extern void NPI_UART_CloseDevice(void);
 
-  /**************************************************************************************************
-   * @fn          NPI_UART_SendAsynchData
-   *
-   * @brief       This function is called by the client when it has data ready to
-   *              be sent asynchronously. This routine allocates an AREQ buffer,
-   *              copies the client's payload, and sets up the send.
-   *
-   * input parameters
-   *
-   * @param *pMsg  - Pointer to data to be sent asynchronously (i.e. AREQ).
-   *
-   * output parameters
-   *
-   * None.
-   *
-   * @return      None.
-   **************************************************************************************************
-   */
-  extern int NPI_UART_SendAsynchData( npiMsgData_t *pMsg );
+/**************************************************************************************************
+* @fn          NPI_UART_SendAsynchData
+*
+* @brief       This function is called by the client when it has data ready to
+*              be sent asynchronously. This routine allocates an AREQ buffer,
+*              copies the client's payload, and sets up the send.
+*
+* input parameters
+*
+* @param *pMsg  - Pointer to data to be sent asynchronously (i.e. AREQ).
+*
+* output parameters
+*
+* None.
+*
+* @return      None.
+**************************************************************************************************
+*/
+extern int NPI_UART_SendAsynchData( npiMsgData_t *pMsg );
 
-  /**************************************************************************************************
-   * @fn          NPI_UART_SendSynchData
-   *
-   * @brief       This function is called by the client when it has data ready to
-   *              be sent synchronously. This routine allocates a SREQ buffer,
-   *              copies the client's payload, sends the data, and waits for the
-   *              reply. The input buffer is used for the output data.
-   *
-   * input parameters
-   *
-   * @param *pMsg  - Pointer to data to be sent synchronously (i.e. the SREQ).
-   *
-   * output parameters
-   *
-   * @param *pMsg  - Pointer to replay data (i.e. the SRSP).
-   *
-   * @return      None.
-   **************************************************************************************************
-   */
-  extern int NPI_UART_SendSynchData( npiMsgData_t *pMsg );
+/**************************************************************************************************
+* @fn          NPI_UART_SendSynchData
+*
+* @brief       This function is called by the client when it has data ready to
+*              be sent synchronously. This routine allocates a SREQ buffer,
+*              copies the client's payload, sends the data, and waits for the
+*              reply. The input buffer is used for the output data.
+*
+* input parameters
+*
+* @param *pMsg  - Pointer to data to be sent synchronously (i.e. the SREQ).
+*
+* output parameters
+*
+* @param *pMsg  - Pointer to replay data (i.e. the SRSP).
+*
+* @return      None.
+**************************************************************************************************
+*/
+extern int NPI_UART_SendSynchData( npiMsgData_t *pMsg );
 
 #ifdef __cplusplus
 }

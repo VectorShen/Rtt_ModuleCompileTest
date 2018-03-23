@@ -53,10 +53,10 @@
 
 #include "pthread.h"
 
-#include  "hal_types.h"
+#include  "common/hal_types.h"
 #include  "hal_spi.h"
 
-#include "npi_lnx_error.h"
+#include "common/npi_lnx_error.h"
 
 #if (defined NPI_SPI) && (NPI_SPI == TRUE)
 

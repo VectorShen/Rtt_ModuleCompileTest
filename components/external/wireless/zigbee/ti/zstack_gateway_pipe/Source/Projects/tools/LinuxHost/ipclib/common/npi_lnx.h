@@ -52,17 +52,14 @@ extern "C"
 /**************************************************************************************************
  * INCLUDES
  **************************************************************************************************/
-#include "hal_types.h"
-//#include "hal_board.h"
-#include "hal_rpc.h"
+#include "common/hal_types.h"
+#include "common/hal_rpc.h"
 
 /**************************************************************************************************
  * CONSTANTS
  **************************************************************************************************/
 
-#define AP_MAX_BUF_LEN 255
-
-#define NPI_PORT			"2533"
+#define AP_MAX_BUF_LEN 	255
 
 /**************************************************************************************************
  * TYPEDEFS
@@ -141,7 +138,7 @@ void NPI_ReadParamReq( uint8 paramId, uint8 len, uint8 *pValue );
  *
  * input parameters
  *
- * @param      portName � name of the serial port
+ * @param      portName 锟� name of the serial port
  * @param		 pCfg	- pointer to configuration parameters
  *
  * output parameters

@@ -58,20 +58,14 @@
 #include <poll.h>
 
 #include "aic.h"
-#include "npi_lnx.h"
+#include "common/npi_lnx.h"
 #include "npi_lnx_spi.h"
-#include "hal_rpc.h"
+#include "common/hal_rpc.h"
 #include "hal_gpio.h"
 
-#include "npi_lnx_error.h"
+#include "common/npi_lnx_error.h"
 
-#ifdef __STRESS_TEST__
 #include <sys/time.h>
-#elif (defined __DEBUG_TIME__)
-#include <sys/time.h>
-#else
-#include <sys/time.h>
-#endif // __STRESS_TEST__
 
 // -- macros --
 #if (defined NPI_SPI) && (NPI_SPI == TRUE)
@@ -238,8 +232,8 @@ int PollLockVarError (int originator)
  *
  * input parameters
  *
- * @param   portName 	– name of the serial port
- * @param	gpioCfg		– GPIO settings for SRDY, MRDY and RESET
+ * @param   portName 	鈥� name of the serial port
+ * @param	gpioCfg		鈥� GPIO settings for SRDY, MRDY and RESET
  *
  * output parameters
  *

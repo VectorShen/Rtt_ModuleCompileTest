@@ -49,10 +49,9 @@
 #include <sys/unistd.h>
 #include <stdbool.h>
 
-#undef printf
 #define printf 	rt_kprintf
-#define perror 	rt_kprintf
-#define puts	rt_kprintf
+#define perror(fmt)\
+	rt_kprintf("[error] : %s.\n", fmt)
 /* ------------------------------------------------------------------------------------------------
  *                                               Types
  * ------------------------------------------------------------------------------------------------
@@ -69,10 +68,6 @@ typedef unsigned int   	uint32;
 #else
 typedef signed   long   int32;
 typedef unsigned long   uint32;
-#endif
-
-#ifndef __cplusplus // For C++ compiler typedef bool will cause lots of trouble
-//typedef unsigned char   bool;
 #endif
 
 typedef uint8           halDataAlign_t;

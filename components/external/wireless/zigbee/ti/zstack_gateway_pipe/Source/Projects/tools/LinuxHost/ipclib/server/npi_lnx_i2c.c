@@ -60,12 +60,12 @@
 #include <linux/input.h>
 
 #include "aic.h"
-#include "npi_lnx.h"
+#include "common/npi_lnx.h"
 #include "npi_lnx_i2c.h"
-#include "hal_rpc.h"
+#include "common/hal_rpc.h"
 #include "hal_gpio.h"
 
-#include "npi_lnx_error.h"
+#include "common/npi_lnx_error.h"
 
 #if (defined __STRESS_TEST__) || (defined __DEBUG_TIME__I2C)
 #include <sys/time.h>
@@ -156,8 +156,8 @@ static int npi_i2c_pollData(npiMsgData_t *pMsg);
  *
  * input parameters
  *
- * @param   portName 	– name of the serial port
- * @param	gpioCfg		– GPIO settings for SRDY, MRDY and RESET
+ * @param   portName 	鈥� name of the serial port
+ * @param	gpioCfg		鈥� GPIO settings for SRDY, MRDY and RESET
  *
  * output parameters
  *

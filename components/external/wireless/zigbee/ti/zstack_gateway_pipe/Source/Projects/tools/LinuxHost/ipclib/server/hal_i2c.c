@@ -55,11 +55,10 @@
 #include "pthread.h"
 
 //RemoTI Include
-//#include  "hal_board.h"
-#include  "hal_types.h"
+#include  "common/hal_types.h"
 #include  "hal_i2c.h"
 
-#include "npi_lnx_error.h"
+#include "common/npi_lnx_error.h"
 
 #ifdef __BIG_DEBUG__
 #define debug_printf(fmt, ...) printf( fmt, ##__VA_ARGS__)

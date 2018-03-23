@@ -54,10 +54,10 @@
 #include <semaphore.h>
 
 #include "aic.h"
-#include "npi_lnx.h"
+#include "common/npi_lnx.h"
 #include "npi_lnx_uart.h"
 
-#include "npi_lnx_error.h"
+#include "common/npi_lnx_error.h"
 
 #if (defined NPI_UART) && (NPI_UART == TRUE)
 // -- macros --
@@ -391,12 +391,6 @@ int NPI_UART_SendSynchData( npiMsgData_t *pMsg )
 	struct timespec expirytime;
 	struct timeval curtime;
 
-#ifdef __DEBUG_TIME__
-	long int diffPrev;
-	int t = 0;
-	int hours = 0, minutes = 0;
-#endif //__DEBUG_TIME__
-
 	pthread_mutex_lock(&npiSyncRespLock);
 	pNpiSyncData = pMsg;
 	ret = npi_sendframe(pMsg->subSys | RPC_CMD_SREQ, pMsg->cmdId, pMsg->pData, pMsg->len);
@@ -406,36 +400,7 @@ int NPI_UART_SendSynchData( npiMsgData_t *pMsg )
 		gettimeofday(&curtime, NULL);
 		expirytime.tv_sec = curtime.tv_sec + NPI_RNP_TIMEOUT;
 		expirytime.tv_nsec = curtime.tv_usec * 1000;
-#ifdef __DEBUG_TIME__
-		if (__DEBUG_TIME_ACTIVE == TRUE)
-		{
-			//            debug_
-			gettimeofday(&curTime, NULL);
-			t = 0;
-			if (curTime.tv_usec >= prevTimeRec.tv_usec)
-			{
-				diffPrev = curTime.tv_usec - prevTimeRec.tv_usec;
-			}
-			else
-			{
-				diffPrev = (curTime.tv_usec + 1000000) - prevTimeRec.tv_usec;
-				t = 1;
-			}
 
-			hours = ((curTime.tv_sec - startTime.tv_sec) - ((curTime.tv_sec - startTime.tv_sec) % 3600))/3600;
-			minutes = ((curTime.tv_sec - startTime.tv_sec) - ((curTime.tv_sec - startTime.tv_sec) % 60))/60;
-			//            debug_
-			time_printf("[<-- %.3d:%.2d:%.2ld.%.6ld (+%ld.%6ld)] [UART] (synch data) Conditional wait %d s\n",
-					hours,											// hours
-					minutes,										// minutes
-					(curTime.tv_sec - startTime.tv_sec) % 60,		// seconds
-					curTime.tv_usec,
-					curTime.tv_sec - prevTimeRec.tv_sec - t,
-					diffPrev,
-					NPI_RNP_TIMEOUT);
-			prevTimeRec = curTime;
-		}
-#endif //__DEBUG_TIME__
 		result = pthread_cond_timedwait(&npiSyncRespCond, &npiSyncRespLock, &expirytime);
 		if (ETIMEDOUT == result)
 		{
@@ -627,10 +592,8 @@ static void *npi_rx_entry(void *ptr)
 	while (!npi_rx_terminate)
 	{
 		int readcount;
-
 		do
 		{
-			//rt_kprintf("wtfwtf......\n");
 			readcount = read(npi_fd, readbuf, sizeof(readbuf));
 			if (readcount > 0)
 			{
@@ -819,74 +782,9 @@ static int npi_write(const void *buf, size_t count)
 {
 	int result;
 
-#ifdef __DEBUG_TIME__
-	long int diffPrev;
-	int t = 0;
-	int hours, minutes;
-	if (__DEBUG_TIME_ACTIVE == TRUE)
-	{
-		//            debug_
-		gettimeofday(&curTime, NULL);
-		if (curTime.tv_usec >= prevTimeRec.tv_usec)
-		{
-			diffPrev = curTime.tv_usec - prevTimeRec.tv_usec;
-		}
-		else
-		{
-			diffPrev = (curTime.tv_usec + 1000000) - prevTimeRec.tv_usec;
-			t = 1;
-		}
-
-		hours = ((curTime.tv_sec - startTime.tv_sec) - ((curTime.tv_sec - startTime.tv_sec) % 3600))/3600;
-		minutes = ((curTime.tv_sec - startTime.tv_sec) - ((curTime.tv_sec - startTime.tv_sec) % 60))/60;
-		//            debug_
-		time_printf("[<-- %.3d:%.2d:%.2ld.%.6ld (+%ld.%6ld)] [UART] write %d bytes to %d\n",
-				hours,											// hours
-				minutes,										// minutes
-				(curTime.tv_sec - startTime.tv_sec) % 60,		// seconds
-				curTime.tv_usec,
-				curTime.tv_sec - prevTimeRec.tv_sec - t,
-				diffPrev,
-				(int)count,
-				npi_fd);
-		prevTimeRec = curTime;
-	}
-#endif //__DEBUG_TIME__
-
 	pthread_mutex_lock(&npi_write_mutex);
 	result = write(npi_fd, buf, count);
 	pthread_mutex_unlock(&npi_write_mutex);
-
-#ifdef __DEBUG_TIME__
-	if (__DEBUG_TIME_ACTIVE == TRUE)
-	{
-		//            debug_
-		gettimeofday(&curTime, NULL);
-		t = 0;
-		if (curTime.tv_usec >= prevTimeRec.tv_usec)
-		{
-			diffPrev = curTime.tv_usec - prevTimeRec.tv_usec;
-		}
-		else
-		{
-			diffPrev = (curTime.tv_usec + 1000000) - prevTimeRec.tv_usec;
-			t = 1;
-		}
-
-		hours = ((curTime.tv_sec - startTime.tv_sec) - ((curTime.tv_sec - startTime.tv_sec) % 3600))/3600;
-		minutes = ((curTime.tv_sec - startTime.tv_sec) - ((curTime.tv_sec - startTime.tv_sec) % 60))/60;
-		//            debug_
-		time_printf("[<-- %.3d:%.2d:%.2ld.%.6ld (+%ld.%6ld)] [UART] result: %d\n",
-				hours,											// hours
-				minutes,										// minutes
-				(curTime.tv_sec - startTime.tv_sec) % 60,		// seconds
-				curTime.tv_usec,
-				curTime.tv_sec - prevTimeRec.tv_sec - t,
-				diffPrev,
-				(int)result);
-		prevTimeRec = curTime;
-	}
-#endif //__DEBUG_TIME__
 
 	return result;
 }
@@ -1177,68 +1075,9 @@ static void npi_iohandler(int status)
 	// Therefore used semaphore instead of mutex.
 
 	/* send wakeup signal */
-#ifdef __DEBUG_TIME__
-	long int diffPrev;
-	int t = 0, hours, minutes;
-	if (__DEBUG_TIME_ACTIVE == TRUE)
-	{
-		//            debug_
-		gettimeofday(&curTime, NULL);
-		if (curTime.tv_usec >= prevTimeRec.tv_usec)
-		{
-			diffPrev = curTime.tv_usec - prevTimeRec.tv_usec;
-		}
-		else
-		{
-			diffPrev = (curTime.tv_usec + 1000000) - prevTimeRec.tv_usec;
-			t = 1;
-		}
-
-		hours = ((curTime.tv_sec - startTime.tv_sec) - ((curTime.tv_sec - startTime.tv_sec) % 3600))/3600;
-		minutes = ((curTime.tv_sec - startTime.tv_sec) - ((curTime.tv_sec - startTime.tv_sec) % 60))/60;
-		//            debug_
-		time_printf("[<-- %.3d:%.2d:%.2ld.%.6ld (+%ld.%6ld)] Signal from UART, grabbing mutex\n",
-				hours,											// hours
-				minutes,										// minutes
-				(curTime.tv_sec - startTime.tv_sec) % 60,		// seconds
-				curTime.tv_usec,
-				curTime.tv_sec - prevTimeRec.tv_sec - t,
-				diffPrev);
-		prevTimeRec = curTime;
-	}
-#endif //__DEBUG_TIME__
 
 	sem_post(&signal_mutex);
 
-#ifdef __DEBUG_TIME__
-	if (__DEBUG_TIME_ACTIVE == TRUE)
-	{
-		//            debug_
-		gettimeofday(&curTime, NULL);
-		t = 0;
-		if (curTime.tv_usec >= prevTimeRec.tv_usec)
-		{
-			diffPrev = curTime.tv_usec - prevTimeRec.tv_usec;
-		}
-		else
-		{
-			diffPrev = (curTime.tv_usec + 1000000) - prevTimeRec.tv_usec;
-			t = 1;
-		}
-
-		hours = ((curTime.tv_sec - startTime.tv_sec) - ((curTime.tv_sec - startTime.tv_sec) % 3600))/3600;
-		minutes = ((curTime.tv_sec - startTime.tv_sec) - ((curTime.tv_sec - startTime.tv_sec) % 60))/60;
-		//            debug_
-		time_printf("[<-- %.3d:%.2d:%.2ld.%.6ld (+%ld.%6ld)] Signal read handle, owning mutex\n",
-				hours,											// hours
-				minutes,										// minutes
-				(curTime.tv_sec - startTime.tv_sec) % 60,		// seconds
-				curTime.tv_usec,
-				curTime.tv_sec - prevTimeRec.tv_sec - t,
-				diffPrev);
-		prevTimeRec = curTime;
-	}
-#endif //__DEBUG_TIME__
 }
 
 /* Install signal handler for UART IO */

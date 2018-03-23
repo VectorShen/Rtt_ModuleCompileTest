@@ -64,9 +64,9 @@
 #include "config.h"
 
 /* NPI includes */
-#include "npi_lnx.h"
-#include "npi_lnx_error.h"
-#include "npi_lnx_ipc_rpc.h"
+#include "common/npi_lnx.h"
+#include "common/npi_lnx_error.h"
+#include "common/npi_lnx_ipc_rpc.h"
 
 #include "npi_lnx_ipc.h"
 
@@ -110,11 +110,10 @@
 /**************************************************************************************************
  *                                        Defines
  **************************************************************************************************/
-#define NPI_SERVER_PIPE_QUEUE_SIZE        20
+#define NPI_SERVER_PIPE_QUEUE_SIZE        		4
 
 #define MAX(a,b)								((a > b) ? a : b)
 
-#define USE_RTT_PIPE_SELECT_STD				0	//1
 /**************************************************************************************************
  *                                           Constant
  **************************************************************************************************/
@@ -287,37 +286,6 @@ char* devPath;
 char* logPath;
 halGpioCfg_t** gpioCfg;
 
-#if (defined __DEBUG_TIME__) || (__STRESS_TEST__)
-struct timeval curTime, startTime, prevTimeSend, prevTimeRec;
-#endif //__DEBUG_TIME__
-
-#ifdef __STRESS_TEST__
-#define TIMING_STATS_SIZE                                                     500
-#define TIMING_STATS_MS_DIV                                                    10
-unsigned int timingStats[2][TIMING_STATS_SIZE + 1];
-RTT_FILE *fpStressTestData;
-#define STRESS_TEST_SUPPORTED_NUM_PAIRING_ENTRIES                              10
-struct
-{
-	uint32 currentSeqNumber[STRESS_TEST_SUPPORTED_NUM_PAIRING_ENTRIES];
-	struct
-    {
-		uint32 errorInSeqNum;
-		uint32 seqNumIdentical;
-	} recErrors;
-} ST_Parameters_t[2] =
-{
-    {
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0}
-    },
-    {
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0}
-    }
-};
-#endif //__STRESS_TEST__
-
 #if 0
 char* npi_rtt_ipc_argvs[2] =
 {
@@ -340,7 +308,7 @@ char* npi_rtt_ipc_argvs[3] =
 int NPI_AsynchMsgCback(npiMsgData_t *pMsg);
 
 int SerialConfigParser(RTT_FILE* serialCfgFd, const char* section,
-		const char* key, char* resString);
+	const char* key, char* resString);
 
 void NPI_LNX_IPC_Exit(int ret);
 
@@ -352,9 +320,6 @@ int NPI_LNX_IPC_ConnectionHandle(int readPipe);
 int searchWritePipeFromActiveList(int readPipe);
 int removeFromActiveList(int pipe);
 int addToActiveList (int readPipe, int writePipe);
-
-void writeToNpiLnxLog(const char* str);
-
 static int npi_ServerCmdHandle(npiMsgData_t *npi_ipc_buf);
 
 /**************************************************************************************************
@@ -386,57 +351,6 @@ void halDelay(uint8 msecs, uint8 sleep)
 	{
 		//    usleep(msecs * 1000);
 	}
-}
-
-void writeToNpiLnxLog(const char* str)
-{
-	int npiLnxLogFd, i = 0;
-	char *fullStr = (char *)malloc(255);
-	char *inStr = (char *)malloc(255);
-
-	time_t timeNow;
-	struct tm * timeNowinfo;
-
-	time ( &timeNow );
-	timeNowinfo = localtime ( &timeNow );
-
-	sprintf(fullStr, "[%s", asctime(timeNowinfo));
-	sprintf(inStr, "%s", str);
-	// Remove \n characters
-	fullStr[strlen(fullStr) - 2] = 0;
-	for (i = strlen(str) - 1; i > MAX(strlen(str), 4); i--)
-	{
-		if (inStr[i] == '\n')
-			inStr[i] = 0;
-	}
-	sprintf(fullStr, "%s] %s", fullStr, inStr);
-
-	// Add global error code
-	sprintf(fullStr, "%s. Error: %.8X\n", fullStr, npi_ipc_errno);
-
-	// Write error message to /dev/npiLnxLog
-	npiLnxLogFd = open(logPath,  O_WRONLY | O_APPEND | O_CREAT, S_IRWXU);
-	if (npiLnxLogFd > 0)
-	{
-		write(npiLnxLogFd, fullStr, strlen(fullStr) + 1);
-//		printf("Wrote:\n%s\n to npiLnxLog.log\n", fullStr, errno);
-	}
-	else
-	{
-		printf("Could not write \n%s\n to npiLnxLog. Error: %.8X\n", str, errno);
-		perror("open");
-	}
-	close(npiLnxLogFd);
-	free(fullStr);
-	free(inStr);
-}
-
-static void print_usage(const char *prog)
-{
-	printf("Usage: %s [config_file_name] [debug]\n", prog);
-	puts("  config_file_name: the name of the config file to use, if not set, the default is ./NPI_Gateway.cfg");
-	puts("  debug: set debug options. 'debugAll' for both BIG and TIME, 'debugTime' for just TIME or 'debugBig' for just BIG \n");
-	exit(1);
 }
 
 /**************************************************************************************************
@@ -471,6 +385,7 @@ void npi_rtt_ipc_main(void* args)
 	int tmpReadPipe;
 	int tmpWritePipe;
     char assignedId[NPI_IPC_ASSIGNED_ID_BUF_LEN];
+	fd_set activePipesFDsSafeCopy;
 
     char npi_ipc_read_fifo_path[FIFO_PATH_BUFFER_LEN];
     char npi_ipc_write_fifo_path[FIFO_PATH_BUFFER_LEN];
@@ -484,14 +399,6 @@ void npi_rtt_ipc_main(void* args)
 	uint8 gpioIdx = 0;
 	char* configFilePath;
 
-#if USE_RTT_PIPE_SELECT_STD
-    struct timeval t;
-    int timeout_cnt = 0xffffffff;
-    t.tv_sec = 0;
-    t.tv_usec = 100000;
-    int select_ret;
-#endif
-
 	if (argc==1)
 	{
 		configFilePath = "/NPI_Gateway.cfg";
@@ -503,30 +410,11 @@ void npi_rtt_ipc_main(void* args)
 	else if (argc==3)
 	{
 		configFilePath = argv[1];
-		if (strcmp(argv[2], "debugAll") == 0)
-		{
-			__BIG_DEBUG_ACTIVE = TRUE;
-			__DEBUG_TIME_ACTIVE = TRUE;
-		}
-		else if (strcmp(argv[2], "debugBig") == 0)
-		{
-			__BIG_DEBUG_ACTIVE = TRUE;
-		}
-		else if (strcmp(argv[2], "debugTime") == 0)
-		{
-			__DEBUG_TIME_ACTIVE = TRUE;
-		}
-		else
-		{
-			print_usage(argv[0]);
-		}
 	}
 	else
 	{
 		printf("Too many arguments\n");
-		print_usage(argv[0]);
 	}
-
 
 	// Allocate memory for string buffer and configuration buffer
 	strBuf = (char*) malloc(128);
@@ -558,7 +446,6 @@ void npi_rtt_ipc_main(void* args)
 		//                            debug_
 		printf("Could not open file '%s'\n", configFilePath);
 		npi_ipc_errno = NPI_LNX_ERROR_IPC_OPEN_REMOTI_RNP_CFG;
-		print_usage(argv[0]);
 		NPI_LNX_IPC_Exit(NPI_LNX_FAILURE);
 	}
 
@@ -585,15 +472,8 @@ void npi_rtt_ipc_main(void* args)
 	}
 	// Copy from buffer to variable
 	memcpy(devPath, strBuf, strlen(strBuf));
-	//            debug_
 	printf("devPath = '%s'\n", devPath);
 
-	//            printf("devPath = ");
-	//            for (i = 0; i < strlen(strBuf); i++)
-	//            {
-	//                            printf("_");
-	//            }
-	//            printf("<\n");
 	// Get path to the log file
 	strBuf = pStrBufRoot;
 	if (NPI_LNX_FAILURE == (SerialConfigParser(serialCfgFd, "LOG", "log", strBuf)))
@@ -604,7 +484,6 @@ void npi_rtt_ipc_main(void* args)
 	}
 	// Copy from buffer to variable
 	memcpy(logPath, strBuf, strlen(strBuf));
-	//            debug_
 	printf("logPath = '%s'\n", logPath);
 
 	// GPIO configuration
@@ -899,36 +778,6 @@ void npi_rtt_ipc_main(void* args)
 	// The following will exit if ret != SUCCESS
 	NPI_LNX_IPC_Exit(ret);
 
-
-#ifdef __STRESS_TEST__
-	/**********************************************************************
-	 * Setup StressTesting
-	 **********************************************************************/
-
-	int i = 0, fdStressTestData, done=0;
-	char pathName[128];
-	do
-	{
-		sprintf(pathName, "results/stressTestData%.4d.txt", i++);
-		printf("%s\n", pathName);
-		fdStressTestData = open( pathName , O_CREAT | O_EXCL | O_WRONLY, S_IWRITE | S_IREAD );
-		printf("fd = %d\n", fdStressTestData);
-		if (fdStressTestData >= 0)
-			done = 1;
-		else
-			close(fdStressTestData);
-	} while (done == 0);
-	// Now it's safe to open the file
-	fpStressTestData = rtt_fopen(pathName, "w");
-
-	time_t rawTime;
-	time(&rawTime);
-	rtt_fprintf(fpStressTestData, "*******************************************************************\n");
-	rtt_fprintf(fpStressTestData, "\nTiming Statistics file created on %s\n\n", ctime(&rawTime));
-	rtt_fprintf(fpStressTestData, "*******************************************************************\n");
-#endif //__STRESS_TEST__
-
-
 	/**********************************************************************
 	 * Now that everything has been initialized and configured, let's open
 	 * a socket and begin listening.
@@ -957,29 +806,18 @@ void npi_rtt_ipc_main(void* args)
 	{
 		printf("open npi_ipc_listen_read_fifo ok with fd = %d.\n", listenPipeReadHndl);
 	}
-#if !USE_RTT_PIPE_SELECT_STD
-	fd_set activePipesFDsSafeCopy;
-#endif
 
 	// Connection main loop. Cannot get here with ret != SUCCESS
-
-	char *toNpiLnxLog = (char *)malloc(AP_MAX_BUF_LEN);
-
-#if !USE_RTT_PIPE_SELECT_STD
 	// Clear file descriptor sets
 	FD_ZERO(&activePipesFDs);
 	FD_ZERO(&activePipesFDsSafeCopy);
 
 	// Add the listener to the set
 	FD_SET (listenPipeReadHndl, &activePipesFDs);
-#endif
+
 
 	fdmax = listenPipeReadHndl;
 
-#if (defined __DEBUG_TIME__) || (__STRESS_TEST__)
-	gettimeofday(&startTime, NULL);
-#endif // (defined __DEBUG_TIME__) || (__STRESS_TEST__)
-	//                                            debug_
 	printf("waiting for first connection on #%d...\n", listenPipeReadHndl);
 
 	while (ret == NPI_LNX_SUCCESS)
@@ -1115,13 +953,6 @@ void npi_rtt_ipc_main(void* args)
                         	clientsNum++;
 							write(listenPipeWriteHndl, assignedId, strlen(assignedId));
                         	close (listenPipeWriteHndl);
-							#ifdef __DEBUG_TIME__
-                        	if (__DEBUG_TIME_ACTIVE == TRUE)
-                        	{
-                            	gettimeofday(&startTime, NULL);
-                        	}
-							#endif //__DEBUG_TIME__
-
                     	}
                     	else
                     	{
@@ -1148,9 +979,6 @@ void npi_rtt_ipc_main(void* args)
                                 // We should now set ret to NPI_SUCCESS, but there is still one fatal error
                                 // possibility so simply set ret = to return value from removeFromActiveList().
                                 ret = removeFromActiveList(c);
-                                sprintf(toNpiLnxLog, "Removed connection #%d", c);
-                                //							printf("%s\n", toNpiLnxLog);
-                                writeToNpiLnxLog(toNpiLnxLog);
                                 break;
                             case NPI_LNX_ERROR_UART_SEND_SYNCH_TIMEDOUT:
                                 //This case can happen in some particular condition:
@@ -1158,9 +986,6 @@ void npi_rtt_ipc_main(void* args)
                                 // if we exit immediately, we will never be able to recover the NP device.
                                 // This may be replace in the future by an update of the RNP behavior
                                 printf("Synchronous Request Timeout...");
-                                sprintf(toNpiLnxLog, "Removed connection #%d", c);
-                                //							printf("%s\n", toNpiLnxLog);
-                                writeToNpiLnxLog(toNpiLnxLog);
                                 ret = NPI_LNX_SUCCESS;
                                 npi_ipc_errno = NPI_LNX_SUCCESS;
                                 break;
@@ -1176,27 +1001,14 @@ void npi_rtt_ipc_main(void* args)
                                     // but keep going.
                                     // Everything about the error can be found in the message, and in npi_ipc_errno:
                                     childThread = ((npiMsgData_t *) npi_ipc_buf[0])->cmdId;
-                                    sprintf(toNpiLnxLog, "Child thread with ID %d in module %d reported error:\t%s",
-                                            NPI_LNX_ERROR_THREAD(childThread),
-                                            NPI_LNX_ERROR_MODULE(childThread),
-                                            (char *)(((npiMsgData_t *) npi_ipc_buf[0])->pData));
-                                    //							printf("%s\n", toNpiLnxLog);
-                                    writeToNpiLnxLog(toNpiLnxLog);
                                     // Force continuation
                                     ret = NPI_LNX_SUCCESS;
                                 }
                                 else
                                 {
-                                    //							debug_
                                     printf("[ERR] npi_ipc_errno 0x%.8X\n", npi_ipc_errno);
                                     // Everything about the error can be found in the message, and in npi_ipc_errno:
                                     childThread = ((npiMsgData_t *) npi_ipc_buf[0])->cmdId;
-                                    sprintf(toNpiLnxLog, "Child thread with ID %d in module %d reported error:\t%s",
-                                            NPI_LNX_ERROR_THREAD(childThread),
-                                            NPI_LNX_ERROR_MODULE(childThread),
-                                            (char *)(((npiMsgData_t *) npi_ipc_buf[0])->pData));
-                                    //							printf("%s\n", toNpiLnxLog);
-                                    writeToNpiLnxLog(toNpiLnxLog);
                                 }
                                 break;
 						}
@@ -1239,15 +1051,12 @@ void npi_rtt_ipc_main(void* args)
 							// Connection closed. Remove from set
 							FD_CLR(c, &activePipesFDs);
                             ret = removeFromActiveList(c);
-                            sprintf(toNpiLnxLog, "Removed connection #%d", c);
 						}
 					}
 				}
 			}
 		}
 	}
-	free(toNpiLnxLog);
-
 	printf("Exit socket while loop\n");
 	/**********************************************************************
 	 * Remember to close down all connections
@@ -1257,11 +1066,6 @@ void npi_rtt_ipc_main(void* args)
 
 	// Free all remaining memory
 	NPI_LNX_IPC_Exit(NPI_LNX_SUCCESS + 1);
-
-#if (defined __STRESS_TEST__) && (__STRESS_TEST__ == TRUE)
-	//            close(fpStressTestData);
-	//            close(fdStressTestData);
-#endif //(defined __STRESS_TEST__) && (__STRESS_TEST__ == TRUE)
 
 	//return ret;
 }
@@ -1432,7 +1236,6 @@ int NPI_LNX_IPC_ConnectionHandle(int readPipe)
 			}
 			else if (errno == ECONNRESET)
 			{
-//				debug_
 				printf("[WARNING] Client disconnect while attempting to send to it\n");
 				debug_printf("Will disconnect #%d\n", readPipe);
 				npi_ipc_errno = NPI_LNX_ERROR_IPC_RECV_DATA_DISCONNECT;
@@ -1482,55 +1285,6 @@ int NPI_LNX_IPC_ConnectionHandle(int readPipe)
 		/*
 		 * Take the message from the client and pass it to the NPI
 		 */
-#ifdef __DEBUG_TIME__
-		if (__DEBUG_TIME_ACTIVE == TRUE)
-		{
-			//            debug_
-			gettimeofday(&curTime, NULL);
-			long int diffPrev;
-			int t = 0;
-			if (curTime.tv_usec >= prevTimeRec.tv_usec)
-			{
-				diffPrev = curTime.tv_usec - prevTimeRec.tv_usec;
-			}
-			else
-			{
-				diffPrev = (curTime.tv_usec + 1000000) - prevTimeRec.tv_usec;
-				t = 1;
-			}
-
-#ifdef __STRESS_TEST__
-			if (diffPrev < 500000)
-				timingStats[0][diffPrev % 1000]++;
-			else
-				timingStats[0][500]++;
-#endif //__STRESS_TEST__
-			int hours = ((curTime.tv_sec - startTime.tv_sec) - ((curTime.tv_sec - startTime.tv_sec) % 3600))/3600;
-			int minutes = ((curTime.tv_sec - startTime.tv_sec) - ((curTime.tv_sec - startTime.tv_sec) % 60))/60;
-			//            debug_
-			time_printf("[<-- %.3d:%.2d:%.2d.%.6ld (+%ld.%6ld)] %.2d bytes, subSys 0x%.2X, cmdId 0x%.2X, pData: \040 ",
-					hours,											// hours
-					minutes,										// minutes
-					(int)(curTime.tv_sec - startTime.tv_sec) % 60,		// seconds
-					(long int)curTime.tv_usec,
-					curTime.tv_sec - prevTimeRec.tv_sec - t,
-					diffPrev,
-					((npiMsgData_t *) npi_ipc_buf[0])->len,
-					((npiMsgData_t *) npi_ipc_buf[0])->subSys,
-					((npiMsgData_t *) npi_ipc_buf[0])->cmdId);
-			prevTimeRec = curTime;
-
-			for (i = 0; i < ((npiMsgData_t *) npi_ipc_buf[0])->len; i++)
-			{
-				//			debug_
-				time_printf(" 0x%.2X",
-						((npiMsgData_t *) npi_ipc_buf[0])->pData[i]);
-			}
-			//            debug_
-			time_printf("\n");
-		}
-#endif //__DEBUG_TIME__
-
 
 		if (((uint8) (((npiMsgData_t *) npi_ipc_buf[0])->subSys) & (uint8) RPC_CMD_TYPE_MASK) == RPC_CMD_SREQ)
 		{
@@ -1658,11 +1412,6 @@ int NPI_LNX_IPC_ConnectionHandle(int readPipe)
 		}
 	}
 
-#if (defined __BIG_DEBUG__) && (__BIG_DEBUG__ == TRUE)
-	// This will effectively result in an echo
-	memcpy(npi_ipc_buf[1], npi_ipc_buf[0], sizeof(npiMsgData_t));
-#endif
-
 	if ((ret == NPI_LNX_FAILURE) && (npi_ipc_errno == NPI_LNX_ERROR_IPC_RECV_DATA_DISCONNECT))
 	{
 		debug_printf("Done with %d\n", readPipe);
@@ -1696,75 +1445,6 @@ int NPI_LNX_IPC_ConnectionHandle(int readPipe)
 int NPI_LNX_IPC_SendData(uint8 len, int writePipe)
 {
 	int bytesSent = 0, i, ret = NPI_LNX_SUCCESS;
-
-#ifdef __DEBUG_TIME__
-	if (__DEBUG_TIME_ACTIVE == TRUE)
-	{
-		gettimeofday(&curTime, NULL);
-		long int diffPrev;
-		int t = 0;
-		if (curTime.tv_usec >= prevTimeSend.tv_usec)
-		{
-			diffPrev = curTime.tv_usec - prevTimeSend.tv_usec;
-		}
-		else
-		{
-			diffPrev = (curTime.tv_usec + 1000000) - prevTimeSend.tv_usec;
-			t = 1;
-		}
-
-#ifdef __STRESS_TEST__
-		if (diffPrev < (TIMING_STATS_SIZE * 1000))
-			timingStats[1][diffPrev / (1000 * TIMING_STATS_MS_DIV)]++;
-		else
-			timingStats[1][TIMING_STATS_SIZE]++;
-
-		// Save timingStats if inactive for > 10 seconds
-		if ((curTime.tv_sec - prevTimeSend.tv_sec) > 10)
-		{
-			time_t rawTime;
-			time(&rawTime);
-			printf("\nTiming Statistics as of %s:\n", ctime(&rawTime));
-			rtt_fprintf(fpStressTestData, "\nTiming Statistics as of %s:\n", ctime(&rawTime));
-			for (i = 0; i < (TIMING_STATS_SIZE / TIMING_STATS_MS_DIV); i++ )
-			{
-				printf(" %4d: \t %8d\n", i * TIMING_STATS_MS_DIV, timingStats[1][i]);
-				rtt_fprintf(fpStressTestData, " %4d: \t %8d\n", i * TIMING_STATS_MS_DIV, timingStats[1][i]);
-			}
-			printf(" More than %u: \t %8u\n", TIMING_STATS_SIZE, timingStats[1][TIMING_STATS_SIZE]);
-			rtt_fprintf(fpStressTestData, " More than %u: \t %8u\n", TIMING_STATS_SIZE, timingStats[1][TIMING_STATS_SIZE]);
-
-			// Then clear statistics for next set.
-			memset(timingStats[1], 0, TIMING_STATS_SIZE + 1);
-		}
-
-#endif //__STRESS_TEST__
-
-		int hours = ((curTime.tv_sec - startTime.tv_sec) - ((curTime.tv_sec - startTime.tv_sec) % 3600))/3600;
-		int minutes = ((curTime.tv_sec - startTime.tv_sec) - ((curTime.tv_sec - startTime.tv_sec) % 60))/60;
-		//            debug_
-		time_printf("[--> %.3d:%.2d:%.2d.%.6ld (+%ld.%6ld)] %.2d bytes, subSys 0x%.2X, cmdId 0x%.2X, pData: \040 ",
-				hours,											// hours
-				minutes,										// minutes
-				(int)(curTime.tv_sec - startTime.tv_sec) % 60,		// seconds
-				(long int) curTime.tv_usec,
-				curTime.tv_sec - prevTimeSend.tv_sec - t,
-				diffPrev,
-				((npiMsgData_t *) npi_ipc_buf[1])->len,
-				((npiMsgData_t *) npi_ipc_buf[1])->subSys,
-				((npiMsgData_t *) npi_ipc_buf[1])->cmdId);
-
-		for (i = 0; i < ((npiMsgData_t *) npi_ipc_buf[1])->len; i++)
-		{
-			//                            debug_
-			time_printf(" 0x%.2X", ((npiMsgData_t *) npi_ipc_buf[1])->pData[i]);
-		}
-		//            debug_
-		time_printf("\n");
-
-		prevTimeSend = curTime;
-	}
-#endif //__DEBUG_TIME__
 
 	if (writePipe < 0)
 	{
@@ -2023,42 +1703,8 @@ int NPI_AsynchMsgCback(npiMsgData_t *pMsg)
 	for (i = 0; i < pMsg->len; i++)
 	{
 		debug_printf(" 0x%.2X", pMsg->pData[i]);
-	} debug_printf("\n");
-
-
-#ifdef __STRESS_TEST__
-
-	// If packet is an AREQ RTI_ReceiveDataInd use first byte in payload as sequence number
-	if ((pMsg->cmdId == 0x05) && (pMsg->pData[7] == 0x03)) //RTIS_CMD_ID_RTI_REC_DATA_IND && RTI_CMD_TEST_DATA_SEQUENCED
-	{
-		uint32 *incomingSeqNum = (uint32 *) &pMsg->pData[8];
-		if (*incomingSeqNum != (ST_Parameters_t[1].currentSeqNumber[pMsg->pData[0]] + 1))
-		{
-			if (*incomingSeqNum == ST_Parameters_t[1].currentSeqNumber[pMsg->pData[0]])
-				ST_Parameters_t[1].recErrors.seqNumIdentical++;
-			else
-				ST_Parameters_t[1].recErrors.errorInSeqNum++;
-
-			printf("\n [ERR] Sequence Number \t (==: %d, !=: %d)\n",
-					ST_Parameters_t[1].recErrors.seqNumIdentical,
-					ST_Parameters_t[1].recErrors.errorInSeqNum);
-			rtt_fprintf(fpStressTestData, " [ERR] Sequence Number \t (==: %d, !=: %d)\n",
-					ST_Parameters_t[1].recErrors.seqNumIdentical,
-					ST_Parameters_t[1].recErrors.errorInSeqNum);
-
-			printf("\tLast Sequence Number: (srcIdx: 0x%.2X) \t %d\n", pMsg->pData[0], ST_Parameters_t[1].currentSeqNumber[pMsg->pData[0]]);
-			rtt_fprintf(fpStressTestData, "\tLast Sequence Number: (srcIdx: 0x%.2X) \t %d\n", pMsg->pData[0], ST_Parameters_t[1].currentSeqNumber[pMsg->pData[0]]);
-
-			printf("\tNew \040 Sequence Number: (srcIdx: 0x%.2X) \t %d", pMsg->pData[0], *incomingSeqNum);
-			rtt_fprintf(fpStressTestData, "\tNew \040 Sequence Number: (srcIdx: 0x%.2X) \t %d", pMsg->pData[0], *incomingSeqNum);
-
-			printf("\n");
-			rtt_fprintf(fpStressTestData, "\n");
-		}
-
-		ST_Parameters_t[1].currentSeqNumber[pMsg->pData[0]] = *incomingSeqNum;
 	}
-#endif //__STRESS_TEST__
+	debug_printf("\n");
 
 	memcpy(npi_ipc_buf[1], (uint8*) pMsg, pMsg->len + RPC_FRAME_HDR_SZ);
 
@@ -2134,9 +1780,6 @@ void NPI_LNX_IPC_Exit(int ret)
 	{
 		// Don't even bother open a socket; device opening failed..
 		printf("Could not open device... exiting\n");
-
-		// Write error message to /dev/npiLnxLog
-		writeToNpiLnxLog("Could not open device");
 
 		exit(npi_ipc_errno);
 	}
@@ -2224,25 +1867,10 @@ static int npi_ServerCmdHandle(npiMsgData_t *pNpi_ipc_buf)
 	{
 		case NPI_LNX_CMD_ID_CTRL_TIME_PRINT_REQ:
         {
-    #ifdef __DEBUG_TIME__
-            __DEBUG_TIME_ACTIVE = pNpi_ipc_buf->pData[0];
-            if (__DEBUG_TIME_ACTIVE == FALSE)
-            {
-                printf("__DEBUG_TIME_ACTIVE set to FALSE\n");
-            }
-            else
-            {
-                printf("__DEBUG_TIME_ACTIVE set to TRUE\n");
-            }
-            // Set return status
-            pNpi_ipc_buf->len = 1;
-            pNpi_ipc_buf->pData[0] = NPI_LNX_SUCCESS;
-    #else //__DEBUG_TIME__
             printf("NPI_Server not compiled to support time stamps\n");
             // Set return status
             pNpi_ipc_buf->len = 1;
             pNpi_ipc_buf->pData[0] = (uint8) NPI_LNX_FAILURE;
-    #endif //__DEBUG_TIME__
             pNpi_ipc_buf->subSys = RPC_SYS_SRV_CTRL;
             ret = NPI_LNX_SUCCESS;
 		}
