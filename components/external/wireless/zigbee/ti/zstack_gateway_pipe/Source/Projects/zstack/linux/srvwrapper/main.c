@@ -153,11 +153,11 @@ int srv_main (int argc, char *argv[])
 		handles[i] = apicInit (argv[1 + i],	// the IP address and port to a TCP Server
 								 DISPLAY_VERSION, pAPIS_SysParams->pfNPICB);
 	}
-
+#if 0
 	// iSetup the API Server
 	APIS_Init (pAPIS_SysParams->serverId, pAPIS_SysParams->serverVerbose,
 			 pAPIS_SysParams->pfServerCB);
-
+#endif
 	// Pass control to the application
 	exitCode = appMain (handles);	// No Return from here
 

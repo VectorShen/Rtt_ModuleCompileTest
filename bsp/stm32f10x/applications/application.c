@@ -21,6 +21,8 @@
 #include <board.h>
 #include <rtthread.h>
 
+#include "shell.h"
+
 #ifdef RT_USING_DFS
 /* dfs filesystem:ELM filesystem init */
 #include <dfs_elm.h>
@@ -103,6 +105,9 @@ extern int npi_rtt_ipc_main(int argc, char ** argv);
 #else
 extern char* npi_rtt_ipc_argvs[3];
 extern void npi_rtt_ipc_main(void* args);
+#ifdef RT_USING_COMPONENTS_DRIVERS_PIPE_TEST_NPI_IPC
+void npi_rtt_ipc_pipe_main(void* args);
+#endif
 #endif
 #endif /* RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY_NPI_IPC */
 #ifdef RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY_ZLSZNP
@@ -150,7 +155,7 @@ void rt_init_thread_entry(void* parameter)
 
 #ifdef RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY
 #ifdef RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY_VERSION_QUERY
-	//version_query_main(2, version_query_argvs);
+	version_query_main(2, version_query_argvs);
 #endif /* RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY_VERSION_QUERY */
 #ifdef RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY_NPI_IPC
 	//npi_rtt_ipc_main(2, npi_rtt_ipc_argvs);
@@ -162,6 +167,17 @@ void rt_init_thread_entry(void* parameter)
     {
     	rt_thread_startup(npi_ipc_thread);
     }
+#if 0	//def RT_USING_COMPONENTS_DRIVERS_PIPE_TEST_NPI_IPC
+    rt_thread_delay(RT_TICK_PER_SECOND*10);
+    rt_thread_t npi_ipc_pipe_thread;
+    npi_ipc_pipe_thread = rt_thread_create("npi_ipc_pipe_thread",
+    		npi_rtt_ipc_pipe_main, RT_NULL,
+          	2048, 9, 20);
+    if(npi_ipc_pipe_thread!=RT_NULL)
+    {
+    	rt_thread_startup(npi_ipc_pipe_thread);
+    }
+#endif
 #endif
 #ifdef RT_USING_WIRELESS_ZIGBEE_TI_ZSTACK_GATEWAY_ZLSZNP
     rt_thread_delay(RT_TICK_PER_SECOND*3);
@@ -209,6 +225,11 @@ void rt_init_thread_entry(void* parameter)
         calibration_init();
     }
 #endif /* #ifdef RT_USING_RTGUI */
+    while(1)
+    {
+    	rt_thread_delay(RT_TICK_PER_SECOND);
+    }
+    rt_kprintf(FINSH_PROMPT);
 }
 
 int rt_application_init(void)

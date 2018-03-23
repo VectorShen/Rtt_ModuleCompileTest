@@ -1076,8 +1076,8 @@ void npi_rtt_ipc_main(void* args)
 
                         	memset (tmpReadPipeName, '\0', TMP_PIPE_NAME_SIZE);
                         	memset (tmpWritePipeName, '\0', TMP_PIPE_NAME_SIZE);
-                        	sprintf(tmpReadPipeName, "%s%s", FIFO_PATH_PREFIX, NPI_IPC_LISTEN_PIPE_CLIENT2SERVER, clientsNum);
-                        	sprintf(tmpWritePipeName, "%s%s", FIFO_PATH_PREFIX, NPI_IPC_LISTEN_PIPE_SERVER2CLIENT, clientsNum);
+                        	sprintf(tmpReadPipeName, "%s%s%d", FIFO_PATH_PREFIX, NPI_IPC_LISTEN_PIPE_CLIENT2SERVER, clientsNum);
+                        	sprintf(tmpWritePipeName, "%s%s%d", FIFO_PATH_PREFIX, NPI_IPC_LISTEN_PIPE_SERVER2CLIENT, clientsNum);
 
                         	tmpReadPipe = open (tmpReadPipeName, ZB_READ_PIPE_OPEN_FLAG, 0);
                         	if (tmpReadPipe == -1)
