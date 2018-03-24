@@ -9,9 +9,12 @@
  *  options may be added to this file, as necessary.
  *
  */
-
+#ifndef _F8WCONFIG_H_
+#define _F8WCONFIG_H_
 // Replacement for confiuration itmems with the CONST label.
+#ifndef CONFIG_ITEM
 #define CONFIG_ITEM
+#endif /* CONFIG_ITEM */
 
 #if !defined ( ATTR_PACKED )
 #define ATTR_PACKED __attribute__((packed))
@@ -231,3 +234,5 @@
 #if !defined(REJOIN_POLL_RATE)
 #define REJOIN_POLL_RATE 440
 #endif
+
+#endif /* _F8WCONFIG_H_ */

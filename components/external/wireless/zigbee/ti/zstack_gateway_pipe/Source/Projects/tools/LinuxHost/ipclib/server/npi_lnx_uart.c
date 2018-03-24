@@ -59,6 +59,11 @@
 
 #include "common/npi_lnx_error.h"
 
+#include "trace.h"
+
+#undef SERVER_NAME
+#define SERVER_NAME	NPI_OS_IPC_SRV
+
 #if (defined NPI_UART) && (NPI_UART == TRUE)
 // -- macros --
 
@@ -71,12 +76,12 @@
 #endif
 
 #ifdef __BIG_DEBUG__
-#define debug_printf(fmt, ...) printf( fmt, ##__VA_ARGS__)
+#define debug_printf(fmt, ...) 	printf( fmt, ##__VA_ARGS__)
 #else
-#define debug_printf(fmt, ...) st (if (__BIG_DEBUG_ACTIVE == TRUE) printf( fmt, ##__VA_ARGS__);)
+#define debug_printf(fmt, ...) 	st (if (__BIG_DEBUG_ACTIVE == TRUE) printf( fmt, ##__VA_ARGS__);)
 #endif
 
-#define time_printf(fmt, ...) st (if ( (__BIG_DEBUG_ACTIVE == TRUE) && (__DEBUG_TIME_ACTIVE == TRUE)) printf( fmt, ##__VA_ARGS__);)
+#define time_printf(fmt, ...) 	st (if ( (__BIG_DEBUG_ACTIVE == TRUE) && (__DEBUG_TIME_ACTIVE == TRUE)) printf( fmt, ##__VA_ARGS__);)
 
 #if (defined __DEBUG_TIME__)
 struct timeval curTime, targetDelayTime;
@@ -276,7 +281,7 @@ int NPI_UART_OpenDevice(const char *portName, void *pCfg)
 	}
 
 	// Open UART port
-	debug_printf("[UART] Opening device %s\n", portName);
+	uiPrintfEx(trINFO, "[UART] Opening device %s\n", portName);
 	if (npi_opentty(portName)) 
     {
 		// device open failed
@@ -328,9 +333,9 @@ int NPI_UART_OpenDevice(const char *portName, void *pCfg)
  */
 void NPI_UART_CloseDevice(void)
 {
-	debug_printf("[UART] UART device closing... \n");
+	uiPrintfEx(trINFO, "[UART] UART device closing... \n");
 	npi_termrx();
-	debug_printf("[UART] UART thread closed... \n");
+	uiPrintfEx(trINFO, "[UART] UART thread closed... \n");
 	npi_closetty();
 	npi_termasync();
 
@@ -338,7 +343,7 @@ void NPI_UART_CloseDevice(void)
 
 	npiOpenFlag = FALSE;
 
-	debug_printf("[UART] UART device closed\n");
+	uiPrintfEx(trINFO, "[UART] UART device closed\n");
 
 }
 
@@ -408,7 +413,7 @@ int NPI_UART_SendSynchData( npiMsgData_t *pMsg )
 			// Uncommenting the following line will cause assert when connection is not there
 			// Uncomment it only during debugging.
 			pMsg->pData[0] = 0xff;
-			debug_printf("[UART] Send synch data timed out\n");
+			uiPrintfEx(trINFO, "[UART] Send synch data timed out\n");
 			npi_ipc_errno = NPI_LNX_ERROR_UART_SEND_SYNCH_TIMEDOUT;
 			ret = NPI_LNX_FAILURE;
 		}
@@ -583,7 +588,7 @@ static void *npi_rx_entry(void *ptr)
 	/* install signal handler */
 	//npi_installsig();
 
-	debug_printf("[UART] Wait for mutex in rx entry:\n");
+	uiPrintfEx(trINFO, "[UART] Wait for mutex in rx entry:\n");
 	
 	/* lock mutex in order not to lose signal */
 	pthread_mutex_lock(&npi_rx_mutex);
@@ -636,7 +641,7 @@ static void *npi_rx_entry(void *ptr)
 					expirytime.tv_nsec -= 1000000000;
 					expirytime.tv_sec++;
 				}
-				debug_printf("[UART] (read loop) Conditional wait %d ns\n", waitTime);
+				uiPrintfEx(trINFO, "[UART] (read loop) Conditional wait %d ns\n", waitTime);
 				pthread_cond_timedwait(&npi_rx_cond, &npi_rx_mutex, &expirytime);
 			}
 #else
@@ -644,7 +649,7 @@ static void *npi_rx_entry(void *ptr)
 #endif
 		}
 	}
-	debug_printf("[UART] npi_rx_terminate == %d, unlocking mutex\n", npi_rx_terminate);
+	uiPrintfEx(trINFO, "[UART] npi_rx_terminate == %d, unlocking mutex\n", npi_rx_terminate);
 	pthread_mutex_unlock(&npi_rx_mutex);
 
 	char *errorMsg;
@@ -676,7 +681,7 @@ static void npi_termrx(void)
 {
 	// send terminate signal
 	npi_rx_terminate = 1;
-	debug_printf("[UART] [MUTEX] Signaling thread that we have terminated\n");
+	uiPrintfEx(trINFO, "[UART] [MUTEX] Signaling thread that we have terminated\n");
 #ifdef NPI_UNRELIABLE_SIGACTION
 	pthread_cond_signal(&npi_rx_cond);
 #else
@@ -684,7 +689,7 @@ static void npi_termrx(void)
 #endif
 
 	// wait till the thread terminates
-	debug_printf("[UART] [MUTEX] Waiting for thread to finish termination\n");
+	uiPrintfEx(trINFO, "[UART] [MUTEX] Waiting for thread to finish termination\n");
 	pthread_join(npiRxThread, NULL);
 }
 
@@ -734,7 +739,7 @@ static int npi_opentty(const char *devpath)
             bRate = B115200;
             break;
 	}
-	debug_printf("[UART] Baud rate set to %d (0x%.6X)\n", uartCfg.speed, bRate);
+	uiPrintfEx(trINFO, "[UART] Baud rate set to %d (0x%.6X)\n", uartCfg.speed, bRate);
 	if (uartCfg.flowcontrol == 1)
 	{
 		newtio.c_cflag = bRate | CS8 | CLOCAL | CREAD | CRTSCTS;
@@ -743,7 +748,7 @@ static int npi_opentty(const char *devpath)
 	{
 		newtio.c_cflag = bRate | CS8 | CLOCAL | CREAD;
 	}
-	debug_printf("[UART] c_cflag set to 0x%.6X\n", newtio.c_cflag);
+	uiPrintfEx(trINFO, "[UART] c_cflag set to 0x%.6X\n", newtio.c_cflag);
 
 	/* IGNPAR  : ignore bytes with parity errors
 	 * ICRNL   : map CR to NL (not in use)
@@ -952,15 +957,15 @@ static int npi_parseframe(const unsigned char *buf, int len)
                                 npi_parseinfo.LEN_Token);
                     }
 
-                    debug_printf("[UART] npi_parseframe: found frame, going to npi_procframe\n");
+                    uiPrintfEx(trINFO, "[UART] npi_parseframe: found frame, going to npi_procframe\n");
                     // process the received frame
                     ret = npi_procframe(npi_parseinfo.CMD0_Token, npi_parseinfo.CMD1_Token,
                             npi_parseinfo.pMsg, npi_parseinfo.LEN_Token);
                 }
                 else
                 {
-                    debug_printf("[UART] npi_parseframe: found incomplete frame, destroying the message:\n");
-                    debug_printf("[UART] \t \t len: 0x%.2X, cmd0: 0x%.2X, cmd1: 0x%.2X, FCS: 0x%.2X\n",
+                    uiPrintfEx(trINFO, "[UART] npi_parseframe: found incomplete frame, destroying the message:\n");
+                    uiPrintfEx(trINFO, "[UART] \t \t len: 0x%.2X, cmd0: 0x%.2X, cmd1: 0x%.2X, FCS: 0x%.2X\n",
                             npi_parseinfo.LEN_Token,
                             npi_parseinfo.CMD0_Token,
                             npi_parseinfo.CMD1_Token,
@@ -988,10 +993,12 @@ static int npi_procframe( uint8 subsystemId, uint8 commandId, uint8 *pBuf,
 {
 	int ret = NPI_LNX_SUCCESS;
 	int i;
-	debug_printf("[UART] npi_procframe, subsys: 0x%.2x, Cmd ID: 0x%.2X, length: %d ,Data:  \n", subsystemId, commandId, length);
+	uiPrintfEx(trINFO, "[UART] npi_procframe, subsys: 0x%.2x, Cmd ID: 0x%.2X, length: %d ,Data", subsystemId, commandId, length);
+	if(length>0)
+		rt_kprintf(": ");
 	for (i=0;i<length;i++)
-		debug_printf("0x%.2x, ", pBuf[i]);
-	debug_printf("\n");
+		rt_kprintf("0x%.2x ", pBuf[i]);
+	rt_kprintf("\n");
 		
 	if ( ((subsystemId & RPC_CMD_TYPE_MASK) == RPC_CMD_SRSP) ||
 			((subsystemId & RPC_SUBSYSTEM_MASK) == RPC_SYS_BOOT))
@@ -1013,7 +1020,7 @@ static int npi_procframe( uint8 subsystemId, uint8 commandId, uint8 *pBuf,
 		// the buffer usage is done, no more use expected
 		free(pBuf);
 
-		debug_printf("[UART] npi_procframe signal synch response received (invoked by read loop) \n");
+		uiPrintfEx(trINFO, "[UART] npi_procframe signal synch response received (invoked by read loop) \n");
 		// Unblock the synchronous request call
 		pthread_cond_signal(&npiSyncRespCond);
 		pthread_mutex_unlock(&npiSyncRespLock);
@@ -1046,7 +1053,7 @@ static int npi_procframe( uint8 subsystemId, uint8 commandId, uint8 *pBuf,
 		}
 		pNpiAsyncQueueHead = pElement;
 
-		debug_printf("[UART] npi_procframe signal areq callback thread (invoked by read loop) \n");
+		uiPrintfEx(trINFO, "[UART] npi_procframe signal areq callback thread (invoked by read loop) \n");
 		/* wake up the asynchronous callback thread */
 		pthread_cond_signal(&npiAsyncCond);
 		pthread_mutex_unlock(&npiAsyncLock);
@@ -1086,7 +1093,7 @@ static void npi_installsig(void)
 	struct sigaction ioaction;
 
 	/* install signal handler */
-	debug_printf("[UART] Install IO signal handler \n");
+	uiPrintfEx(trINFO, "[UART] Install IO signal handler \n");
 	ioaction.sa_handler = npi_iohandler;
 	sigemptyset(&ioaction.sa_mask);
 	ioaction.sa_flags = 0;

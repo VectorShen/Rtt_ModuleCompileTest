@@ -57,6 +57,10 @@
 #include "zstack.pb-c.h"
 #include "api_server.h"
 #include "zstackpb.h"
+
+#undef SERVER_NAME
+#define SERVER_NAME ZSTACKZNP_SRVR
+
 #include "trace.h"
 
 /*********************************************************************
@@ -403,7 +407,7 @@ void zspbInit (uint8 task_id)
  */
 void znpInit (uint8 triggerStartEvent)
 {
-	uiPrintf(
+	uiPrintfEx(trINFO,
 				"zstackpb config: defaultChannelList:%x, configPANID:%x, deviceType:%d\n",
 				zgDefaultChannelList, zgConfigPANID, deviceType);
 
@@ -534,7 +538,7 @@ void zspbHandlePbCb (int connection, uint8 subSys, uint8 cmdId, uint16 len,
 {
 	if (type == SERVER_CONNECT)
 	{
-		uiPrintf( "zstackpb zspbHandlePbCb - connected: %d\n",
+		uiPrintfEx(trINFO,  "zstackpb zspbHandlePbCb - connected: %d\n",
 					connection);
 	}
 	else if (type == SERVER_DISCONNECT)
@@ -558,7 +562,7 @@ void zspbHandlePbCb (int connection, uint8 subSys, uint8 cmdId, uint16 len,
 	}
 	else if (type == SERVER_DATA)
 	{
-		uiPrintf(
+		uiPrintfEx(trINFO,
 					"zstackpb zspbHandlePbCb: subsystemID:%x, cmdId:%x\n",
 					subSys, cmdId);
 
@@ -578,7 +582,7 @@ void zspbHandlePbCb (int connection, uint8 subSys, uint8 cmdId, uint16 len,
             case ZSTACK_CMD_IDS__AF_INTERPAN_CTL_REQ:
             default:
                 {
-                    uiPrintf( "zstackpb Rcvd - Unknown: %d\n",
+                    uiPrintfEx(trINFO,  "zstackpb Rcvd - Unknown: %d\n",
                                 cmdId);
                     sendDefaultRsp (connection, cmdId,
                                     ZSTATUS_VALUES__ZUnsupportedMode);
@@ -1263,7 +1267,7 @@ void zspbHandlePbCb (int connection, uint8 subSys, uint8 cmdId, uint16 len,
  */
 static void zspbProcessZDOMsgs (zdoIncomingMsg_t * inMsg)
 {
-	uiPrintf(
+	uiPrintfEx(trINFO,
 				"zstackpb Sending ZDO Rsp/Ind Msg - clusterID: 0x%.4X\n",
 				inMsg->clusterID);
 
@@ -1561,7 +1565,7 @@ static void processDevStateChangeInd (uint8 state)
 	uint8 *pBuf;
 	DevStateChangeInd stateChg = DEV_STATE_CHANGE_IND__INIT;
 
-	uiPrintf( "zstackpb: DevStateChangeInd: state:%d\n", state);
+	uiPrintfEx(trINFO,  "zstackpb: DevStateChangeInd: state:%d\n", state);
 
 	stateChg.cmdid = ZSTACK_CMD_IDS__DEV_STATE_CHANGE_IND;
 	stateChg.state = state;
@@ -1714,7 +1718,7 @@ static void sendDefaultRsp (int connection, uint8 cmdId, ZStatusValues status)
 	}
 	else
 	{
-		uiPrintf( "zstackpb sendDefaultRsp: mem alloc error\n");
+		uiPrintfEx(trINFO,  "zstackpb sendDefaultRsp: mem alloc error\n");
 	}
 }
 
@@ -3065,7 +3069,7 @@ static void processAfRegisterReq (int connection, AfRegisterReq * pMsg)
 
 	if (epTableFindEntryEP ((uint8) pMsg->endpoint))
 	{
-		uiPrintf( "zstackpb afRegister fail: endpoint:%d\n",
+		uiPrintfEx(trINFO,  "zstackpb afRegister fail: endpoint:%d\n",
 					pMsg->endpoint);
 		status = ZSTATUS_VALUES__ZAfDuplicateEndpoint;
 	}
@@ -3151,7 +3155,7 @@ static void processAfRegisterReq (int connection, AfRegisterReq * pMsg)
                 }
             }
 
-            uiPrintf( "zstackpb afRegister: profileID:%x\n",
+            uiPrintfEx(trINFO,  "zstackpb afRegister: profileID:%x\n",
                         pItem->epDesc.simpleDesc->AppProfId);
 
             status = afRegister (&(pItem->epDesc));
@@ -3335,7 +3339,7 @@ static void processAfDataReq (int connection, AfDataReq * pMsg)
 		uint8 transId = pMsg->transid;
 		uint8 txOptions = convertPBTransOptions (pMsg->options);
 
-		uiPrintf(
+		uiPrintfEx(trINFO,
 					"zstackpb Rcvd AF Data Request: addrMode: %d, dstAddr:%x, dep:%d, sep:%d\n",
 					pMsg->dstaddr->addrmode, pMsg->dstaddr->shortaddr,
 					pMsg->dstaddr->endpoint, pMsg->srcendpoint);
@@ -3402,7 +3406,7 @@ static void processAfDataReq (int connection, AfDataReq * pMsg)
         }
 		else
         {
-            uiPrintf(
+            uiPrintfEx(trINFO,
                         "zstackpb Rcvd AF Data Request: ep not found2\n");
             status = ZSTATUS_VALUES__ZInvalidParameter;
         }
@@ -3429,7 +3433,7 @@ static void processZdoMatchDescReq (int connection, ZdoMatchDescReq * pMsg)
 	uint16 *inClusters = NULL;
 	uint16 *outClusters = NULL;
 
-	uiPrintf( "zstackpb Rcvd Match Descriptor Request\n");
+	uiPrintfEx(trINFO,  "zstackpb Rcvd Match Descriptor Request\n");
 
 	dstAddr.addrMode = Addr16Bit;
 	dstAddr.addr.shortAddr = pMsg->dstaddr;
@@ -4682,7 +4686,7 @@ void *zdoSrcRtgCB (void *pStr)
 	ZdoSrcRtgInd srcRtgInd = ZDO_SRC_RTG_IND__INIT;
 	zdoSrcRtg_t *pSrcRtg = (zdoSrcRtg_t *) pStr;
 
-	uiPrintf(
+	uiPrintfEx(trINFO,
 				"zstackpb Rcvd Source Route Ind: srcAddr:%.4X, relayCnt:%d\n",
 				pSrcRtg->srcAddr, pSrcRtg->relayCnt);
 
@@ -4741,7 +4745,7 @@ void *zdoConcentratorIndCB (void *pStr)
 	ZdoConcentratorInd conInd = ZDO_CONCENTRATOR_IND__INIT;
 	zdoConcentratorInd_t *pConInd = (zdoConcentratorInd_t *) pStr;
 
-	uiPrintf( "zstackpb Rcvd ZDO Concentrator Ind\n");
+	uiPrintfEx(trINFO,  "zstackpb Rcvd ZDO Concentrator Ind\n");
 
 	conInd.cmdid = ZSTACK_CMD_IDS__ZDO_CONCENTRATOR_IND;
 	conInd.nwkaddr = pConInd->nwkAddr;
@@ -4779,7 +4783,7 @@ void *zdoNwkDiscCnfCB (void *pStr)
 	ZdoNwkDiscCnf nwkDiscCnf = ZDO_NWK_DISC_CNF__INIT;
 	uint8 *pStatus = (uint8 *) pStr;
 
-	uiPrintf( "zstackpb Rcvd Network Discovery Confirm\n");
+	uiPrintfEx(trINFO,  "zstackpb Rcvd Network Discovery Confirm\n");
 
 	nwkDiscCnf.cmdid = ZSTACK_CMD_IDS__ZDO_NWK_DISC_CNF;
 	nwkDiscCnf.status = *pStatus;
@@ -4815,7 +4819,7 @@ void *zdoBeaconNotifyIndCB (void *pStr)
 	ZdoBeaconNotifyInd beaconInd = ZDO_BEACON_NOTIFY_IND__INIT;
 	NLME_beaconInd_t *pBeaconInd = (NLME_beaconInd_t *) pStr;
 
-	uiPrintf( "zstackpb Rcvd Beacon Notify Ind 1\n");
+	uiPrintfEx(trINFO,  "zstackpb Rcvd Beacon Notify Ind 1\n");
 
 	beaconInd.cmdid = ZSTACK_CMD_IDS__ZDO_BEACON_NOTIFY_IND;
 	beaconInd.sourceaddr = pBeaconInd->sourceAddr;
@@ -4864,7 +4868,7 @@ void *zdoJoinCnfCB (void *pStr)
 	ZdoJoinCnf joinCnf = ZDO_JOIN_CNF__INIT;
 	zdoJoinCnf_t *pJoinCnf = (zdoJoinCnf_t *) pStr;
 
-	uiPrintf( "zstackpb Rcvd Join Confirm\n");
+	uiPrintfEx(trINFO,  "zstackpb Rcvd Join Confirm\n");
 
 	joinCnf.cmdid = ZSTACK_CMD_IDS__ZDO_JOIN_CNF;
 	joinCnf.status = pJoinCnf->status;
@@ -4902,7 +4906,7 @@ void *zdoLeaveCnfCB (void *pStr)
 	ZdoLeaveCnf leaveCnf = ZDO_LEAVE_CNF__INIT;
 	NLME_LeaveCnf_t *pLeaveCnf = (NLME_LeaveCnf_t *) pStr;
 
-	uiPrintf( "zstackpb Rcvd ZDO Leave Confirm\n");
+	uiPrintfEx(trINFO,  "zstackpb Rcvd ZDO Leave Confirm\n");
 
 	leaveCnf.cmdid = ZSTACK_CMD_IDS__ZDO_LEAVE_CNF;
 	leaveCnf.dstaddr = pLeaveCnf->dstAddr;
@@ -4942,7 +4946,7 @@ void *zdoLeaveIndCB (void *pStr)
 	ZdoLeaveInd leaveInd = ZDO_LEAVE_IND__INIT;
 	NLME_LeaveInd_t *pLeaveInd = (NLME_LeaveInd_t *) pStr;
 
-	uiPrintf( "zstackpb Rcvd ZDO Leave Ind\n");
+	uiPrintfEx(trINFO,  "zstackpb Rcvd ZDO Leave Ind\n");
 
 	leaveInd.cmdid = ZSTACK_CMD_IDS__ZDO_LEAVE_IND;
 	leaveInd.srcaddr = pLeaveInd->srcAddr;
@@ -5097,7 +5101,7 @@ static void sendNodeDescRsp (uint16 srcAddr, ZDO_NodeDescRsp_t * pNdRsp)
 	NodeDescriptor nodeDesc = NODE_DESCRIPTOR__INIT;
 	ZdoNodeDescRspInd ndRsp = ZDO_NODE_DESC_RSP_IND__INIT;
 
-	uiPrintf( "zstackpb Sending Node Descriptor Response Ind\n");
+	uiPrintfEx(trINFO,  "zstackpb Sending Node Descriptor Response Ind\n");
 
 	ndRsp.cmdid = ZSTACK_CMD_IDS__ZDO_NODE_DESC_RSP;
 	ndRsp.status = pNdRsp->status;
@@ -5160,7 +5164,7 @@ static void sendPowerDescRsp (uint16 srcAddr, ZDO_PowerRsp_t * pPowerRsp)
 	PowerDescriptor pwrDesc = POWER_DESCRIPTOR__INIT;
 	ZdoPowerDescRspInd pwrRsp = ZDO_POWER_DESC_RSP_IND__INIT;
 
-	uiPrintf( "zstackpb Sending Power Descriptor Response Ind\n");
+	uiPrintfEx(trINFO,  "zstackpb Sending Power Descriptor Response Ind\n");
 
 	pwrRsp.cmdid = ZSTACK_CMD_IDS__ZDO_POWER_DESC_RSP;
 	pwrRsp.status = pPowerRsp->status;
@@ -5208,7 +5212,7 @@ static void sendSimpleDescRsp (uint16 srcAddr, ZDO_SimpleDescRsp_t * pSimpleRsp)
 	SimpleDescriptor simpleDesc = SIMPLE_DESCRIPTOR__INIT;
 	ZdoSimpleDescRspInd simpleRsp = ZDO_SIMPLE_DESC_RSP_IND__INIT;
 
-	uiPrintf( "zstackpb Sending Simple Descriptor Response Ind\n");
+	uiPrintfEx(trINFO,  "zstackpb Sending Simple Descriptor Response Ind\n");
 
 	simpleRsp.cmdid = ZSTACK_CMD_IDS__ZDO_SIMPLE_DESC_RSP;
 	simpleRsp.status = pSimpleRsp->status;
@@ -5288,7 +5292,7 @@ static void sendActiveEPRsp (uint16 srcAddr,
 	uint8 *pBuf;
 	ZdoActiveEndpointsRspInd epRsp = ZDO_ACTIVE_ENDPOINTS_RSP_IND__INIT;
 
-	uiPrintf( "zstackpb Sending Active Endpoints Response Ind\n");
+	uiPrintfEx(trINFO,  "zstackpb Sending Active Endpoints Response Ind\n");
 
 	epRsp.cmdid = ZSTACK_CMD_IDS__ZDO_ACTIVE_EP_RSP;
 	epRsp.status = pActiveEPRsp->status;
@@ -5343,7 +5347,7 @@ static void sendMatchDescRsp (uint16 srcAddr,
 	uint8 *pBuf;
 	ZdoMatchDescRspInd mdRsp = ZDO_MATCH_DESC_RSP_IND__INIT;
 
-	uiPrintf( "zstackpb Sending Match Descriptor Response Ind\n");
+	uiPrintfEx(trINFO,  "zstackpb Sending Match Descriptor Response Ind\n");
 
 	mdRsp.cmdid = ZSTACK_CMD_IDS__ZDO_MATCH_DESC_RSP;
 	mdRsp.status = pActiveEPRsp->status;
@@ -5397,7 +5401,7 @@ static void sendUserDescRsp (uint16 srcAddr, ZDO_UserDescRsp_t * pUdRsp)
 	uint8 *pBuf;
 	ZdoUserDescRspInd udRsp = ZDO_USER_DESC_RSP_IND__INIT;
 
-	uiPrintf( "zstackpb Sending User Descriptor Response Ind\n");
+	uiPrintfEx(trINFO,  "zstackpb Sending User Descriptor Response Ind\n");
 
 	udRsp.cmdid = ZSTACK_CMD_IDS__ZDO_USER_DESC_RSP;
 	udRsp.status = pUdRsp->status;
@@ -5447,7 +5451,7 @@ static void sendServerDiscRsp (uint16 srcAddr, ZDO_ServerDiscRsp_t * pSdRsp)
 	ServerCapabilities srvCap = SERVER_CAPABILITIES__INIT;
 	ZdoServerDiscoveryRspInd sdRsp = ZDO_SERVER_DISCOVERY_RSP_IND__INIT;
 
-	uiPrintf( "zstackpb Sending Server Discovery Response Ind\n");
+	uiPrintfEx(trINFO,  "zstackpb Sending Server Discovery Response Ind\n");
 
 	sdRsp.cmdid = ZSTACK_CMD_IDS__ZDO_SERVER_DISC_RSP;
 	sdRsp.status = pSdRsp->status;
@@ -5485,7 +5489,7 @@ static void sendEndDeviceTimeoutRsp (uint16 srcAddr, uint16 timeout)
 	uint8 *pBuf;
 	ZdoEndDeviceTimeoutRspInd edtRsp = ZDO_END_DEVICE_TIMEOUT_RSP_IND__INIT;
 
-	uiPrintf( "zstackpb Sending End Device Timeout Response Ind\n");
+	uiPrintfEx(trINFO,  "zstackpb Sending End Device Timeout Response Ind\n");
 
 	edtRsp.cmdid = ZSTACK_CMD_IDS__ZDO_END_DEVICE_TIMEOUT_RSP;
 	edtRsp.status = ZSTATUS_VALUES__ZSuccess;
@@ -5521,7 +5525,7 @@ static void sendBindRsp (uint16 srcAddr, uint8 result)
 	uint8 *pBuf;
 	ZdoBindRspInd bindRsp = ZDO_BIND_RSP_IND__INIT;
 
-	uiPrintf( "zstackpb Sending Bind Response Ind\n");
+	uiPrintfEx(trINFO,  "zstackpb Sending Bind Response Ind\n");
 
 	bindRsp.cmdid = ZSTACK_CMD_IDS__ZDO_BIND_RSP;
 	bindRsp.status = result;
@@ -5556,7 +5560,7 @@ static void sendEndDeviceBindRsp (uint16 srcAddr, uint8 result)
 	uint8 *pBuf;
 	ZdoEndDeviceBindRspInd bindRsp = ZDO_END_DEVICE_BIND_RSP_IND__INIT;
 
-	uiPrintf( "zstackpb Sending End Device Bind Response Ind\n");
+	uiPrintfEx(trINFO,  "zstackpb Sending End Device Bind Response Ind\n");
 
 	bindRsp.cmdid = ZSTACK_CMD_IDS__ZDO_END_DEVICE_BIND_RSP;
 	bindRsp.status = result;
@@ -5591,7 +5595,7 @@ static void sendUnbindRsp (uint16 srcAddr, uint8 result)
 	uint8 *pBuf;
 	ZdoUnbindRspInd unbindRsp = ZDO_UNBIND_RSP_IND__INIT;
 
-	uiPrintf( "zstackpb Sending Unbind Response Ind\n");
+	uiPrintfEx(trINFO,  "zstackpb Sending Unbind Response Ind\n");
 
 	unbindRsp.cmdid = ZSTACK_CMD_IDS__ZDO_UNBIND_RSP;
 	unbindRsp.status = result;
@@ -5626,7 +5630,7 @@ static void sendMgmtNwkDiscRsp (uint16 srcAddr,
 	uint8 *pBuf;
 	ZdoMgmtNwkDiscRspInd ndRsp = ZDO_MGMT_NWK_DISC_RSP_IND__INIT;
 
-	uiPrintf(
+	uiPrintfEx(trINFO,
 				"zstackpb Sending Mgmt Network Discovery Response Ind\n");
 
 	ndRsp.cmdid = ZSTACK_CMD_IDS__ZDO_MGMT_NWK_DISC_RSP;
@@ -5696,7 +5700,7 @@ static void sendMgmtLqiRsp (uint16 srcAddr, ZDO_MgmtLqiRsp_t * pLqiRsp)
 	uint8 *pBuf;
 	ZdoMgmtLqiRspInd lqiRsp = ZDO_MGMT_LQI_RSP_IND__INIT;
 
-	uiPrintf( "zstackpb Sending Mgmt LQI Response Ind\n");
+	uiPrintfEx(trINFO,  "zstackpb Sending Mgmt LQI Response Ind\n");
 
 	lqiRsp.cmdid = ZSTACK_CMD_IDS__ZDO_MGMT_LQI_RSP;
 	lqiRsp.status = pLqiRsp->status;
@@ -5766,7 +5770,7 @@ static void sendMgmtRtgRsp (uint16 srcAddr, ZDO_MgmtRtgRsp_t * pRtgRsp)
 	uint8 *pBuf;
 	ZdoMgmtRtgRspInd rtgRsp = ZDO_MGMT_RTG_RSP_IND__INIT;
 
-	uiPrintf( "zstackpb Sending Mgmt Routing Response Ind\n");
+	uiPrintfEx(trINFO,  "zstackpb Sending Mgmt Routing Response Ind\n");
 
 	rtgRsp.cmdid = ZSTACK_CMD_IDS__ZDO_MGMT_RTG_RSP;
 	rtgRsp.status = pRtgRsp->status;
@@ -5841,7 +5845,7 @@ static void sendMgmtBindRsp (uint16 srcAddr, ZDO_MgmtBindRsp_t * pBindRsp)
 	uint8 *pBuf;
 	ZdoMgmtBindRspInd bindRsp = ZDO_MGMT_BIND_RSP_IND__INIT;
 
-	uiPrintf( "zstackpb Sending Mgmt Bind Response Ind\n");
+	uiPrintfEx(trINFO,  "zstackpb Sending Mgmt Bind Response Ind\n");
 
 	bindRsp.cmdid = ZSTACK_CMD_IDS__ZDO_MGMT_BIND_RSP;
 	bindRsp.status = pBindRsp->status;
@@ -5926,7 +5930,7 @@ static void sendMgmtLeaveRsp (uint16 srcAddr, uint8 result)
 	uint8 *pBuf;
 	ZdoMgmtLeaveRspInd leaveRsp = ZDO_MGMT_LEAVE_RSP_IND__INIT;
 
-	uiPrintf( "zstackpb Sending Mgmt Leave Response Ind\n");
+	uiPrintfEx(trINFO,  "zstackpb Sending Mgmt Leave Response Ind\n");
 
 	leaveRsp.cmdid = ZSTACK_CMD_IDS__ZDO_MGMT_LEAVE_RSP;
 	leaveRsp.status = result;
@@ -5961,7 +5965,7 @@ static void sendMgmtDirectJoinRsp (uint16 srcAddr, uint8 result)
 	uint8 *pBuf;
 	ZdoMgmtDirectJoinRspInd djRsp = ZDO_MGMT_DIRECT_JOIN_RSP_IND__INIT;
 
-	uiPrintf( "zstackpb Sending Mgmt Direct Join Response Ind\n");
+	uiPrintfEx(trINFO,  "zstackpb Sending Mgmt Direct Join Response Ind\n");
 
 	djRsp.cmdid = ZSTACK_CMD_IDS__ZDO_MGMT_DIRECT_JOIN_RSP;
 	djRsp.status = result;
@@ -5996,7 +6000,7 @@ static void sendMgmtPermitJoinRsp (uint16 srcAddr, uint8 result)
 	uint8 *pBuf;
 	ZdoMgmtPermitJoinRspInd pjRsp = ZDO_MGMT_PERMIT_JOIN_RSP_IND__INIT;
 
-	uiPrintf( "zstackpb Sending Mgmt Permit Join Response Ind\n");
+	uiPrintfEx(trINFO,  "zstackpb Sending Mgmt Permit Join Response Ind\n");
 
 	pjRsp.cmdid = ZSTACK_CMD_IDS__ZDO_MGMT_PERMIT_JOIN_RSP;
 	pjRsp.status = result;
@@ -6031,7 +6035,7 @@ static void sendMgmtNwkUpdateNotify (uint16 srcAddr,
 	uint8 *pBuf;
 	ZdoMgmtNwkUpdateNotifyInd nuNot = ZDO_MGMT_NWK_UPDATE_NOTIFY_IND__INIT;
 
-	uiPrintf( "zstackpb Sending Mgmt Update Notify Response Ind\n");
+	uiPrintfEx(trINFO,  "zstackpb Sending Mgmt Update Notify Response Ind\n");
 
 	nuNot.cmdid = ZSTACK_CMD_IDS__ZDO_MGMT_NWK_UPDATE_NOTIFY;
 	nuNot.status = pNotify->status;
@@ -6086,7 +6090,7 @@ void sendDeviceAnnounce (uint16 srcAddr, ZDO_DeviceAnnce_t * pDevAnn)
 	CapabilityInfo capInfo = CAPABILITY_INFO__INIT;
 	ZdoDeviceAnnounceInd devInd = ZDO_DEVICE_ANNOUNCE_IND__INIT;
 
-	uiPrintf( "zstackpb Sending Device Announce Ind\n");
+	uiPrintfEx(trINFO,  "zstackpb Sending Device Announce Ind\n");
 
 	devInd.cmdid = ZSTACK_CMD_IDS__ZDO_DEVICE_ANNOUNCE;
 	devInd.srcaddr = srcAddr;
@@ -6126,7 +6130,7 @@ void sendSysJammerInd (uint8 jammerInd)
 	uint8 *pBuf;
 	DevJammerInd jamInd = DEV_JAMMER_IND__INIT;
 
-	uiPrintf( "zstackpb Sending Device Jammer Ind: %d\n", jammerInd);
+	uiPrintfEx(trINFO,  "zstackpb Sending Device Jammer Ind: %d\n", jammerInd);
 
 	jamInd.cmdid = ZSTACK_CMD_IDS__DEV_JAMMER_IND;
 	if (jammerInd)
@@ -6168,7 +6172,7 @@ void *sendTcDeviceInd (void *params)
 	memcpy (&devInd.extendedaddr, pDev->extAddr, 8);
 	devInd.parentaddr = pDev->parentAddr;
 
-	uiPrintf(
+	uiPrintfEx(trINFO,
 				"zstackpb Sending TC Device Ind: nwkAddr:0x%.4X, extAddr:0x%.16llX, parentAddr:0x%.4X\n",
 				devInd.nwkaddr, devInd.extendedaddr, devInd.parentaddr);
 
@@ -6203,7 +6207,7 @@ void *sendDevPermitJoinInd (void *params)
 	uint8 *pBuf;
 	DevPermitJoinInd devInd = DEV_PERMIT_JOIN_IND__INIT;
 
-	uiPrintf( "zstackpb Sending Dev Permit Join Ind: 0x%.2X\n",
+	uiPrintfEx(trINFO,  "zstackpb Sending Dev Permit Join Ind: 0x%.2X\n",
 				duration);
 
 	devInd.cmdid = ZSTACK_CMD_IDS__DEV_PERMIT_JOIN_IND;
@@ -6252,7 +6256,7 @@ static void sendNwkInfoRsp (int connection)
 	deviceType = ZSTACK_DEVICE_BUILD;
 #endif
 
-	uiPrintf( "zstackpb Sending Network Info Response\n");
+	uiPrintfEx(trINFO,  "zstackpb Sending Network Info Response\n");
 	niRsp.cmdid = ZSTACK_CMD_IDS__SYS_NWK_INFO_READ_RSP;
 
 	niRsp.nwkaddr = _NIB.nwkDevAddress;

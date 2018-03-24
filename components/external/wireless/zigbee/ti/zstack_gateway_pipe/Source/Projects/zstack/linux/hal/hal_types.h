@@ -39,7 +39,10 @@
 #define HAL_TYPES_H
 
 /* Texas Instruments MSP430 */
-
+#include <rtthread.h>
+#include <dfs_posix.h>
+#include <dfs_poll.h>
+#include <stdbool.h>
 /* ------------------------------------------------------------------------------------------------
  *                                               Types
  * ------------------------------------------------------------------------------------------------
@@ -55,7 +58,7 @@ typedef unsigned short uint16;
 typedef signed int int32;
 typedef unsigned int uint32;
 
-typedef unsigned char bool;
+//typedef unsigned char bool;
 
 typedef uint16 halDataAlign_t;
 

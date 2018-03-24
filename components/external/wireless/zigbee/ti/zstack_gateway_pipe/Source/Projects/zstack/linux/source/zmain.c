@@ -48,6 +48,10 @@
 #include "../srvwrapper/hal_rpc.h"
 #include "api_server.h"
 #include "zstackpb.h"
+
+#undef SERVER_NAME
+#define SERVER_NAME ZSTACKZNP_SRVR
+
 #include "trace.h"
 
 #include "OSAL.h"
@@ -85,11 +89,6 @@ apicHandle_t zmainClientHandle;
 struct pollfd *pollFds;
 int numPollFds;
 struct timespec ppollTimeout = {.tv_sec = 0,.tv_nsec = 0 };
-
-#ifdef USE_KEY
-extern int keyFd;
-int keyFdIdx;
-#endif
 
 static int polltimeOut = POLL_TIMEOUT;
 
@@ -238,11 +237,11 @@ int appMain (apicHandle_t * handles)
 
 #if !defined ( LINUX_ZNP )
 #if defined ( NV_RESTORE )
-	uiPrintf ("\nzmain NV Restore Enabled\n");
+	uiPrintfEx(trINFO, "\nzmain NV Restore Enabled\n");
 #endif
 
 #if ( SECURE == 1 )
-	uiPrintf ("\nzmain Security Enabled\n");
+	uiPrintfEx(trINFO, "\nzmain Security Enabled\n");
 #endif
 #endif // !LINUX_ZNP
 	// Do the rest of the initialization
@@ -318,10 +317,6 @@ static void initPoll (void)
 
 	numPollFds = 0;
 
-#if defined ( USE_KEY )
-	keyFdIdx = numPollFds++;
-#endif
-
 	//Add the number of fd's in osal timers
 	numOsalFds = osal_timer_num_active ();
 	numPollFds += numOsalFds;
@@ -334,17 +329,11 @@ static void initPoll (void)
 	pollFds = malloc (numPollFds * sizeof (struct pollfd));
 	if (pollFds == 0)
 	{
-		uiPrintf ("zmain error allocation pollFds\n");
+		uiPrintfEx(trINFO, "zmain error allocation pollFds\n");
 	}
 
 	if (pollFds)
 	{
-#ifdef USE_KEY
-		pollFds[keyFdIdx].fd = keyFd;
-		pollFds[keyFdIdx].events = POLLIN;
-		//uiPrintfEx(trUNMASKABLE, "keyFdIdx=%d, fd=%d\n", keyFdIdx, pollFds[keyFdIdx].fd);
-#endif
-
 		//add osal timer fd's if there are any
 		if (numOsalFds)
         {
@@ -353,7 +342,7 @@ static void initPoll (void)
             if (osal_fds)
             {
                 osal_GetTimerFds (osal_fds, numOsalFds);
-                //uiPrintfEx(trUNMASKABLE, "numOsalFds=%d\n", numOsalFds);
+                uiPrintfEx(trUNMASKABLE, "numOsalFds=%d\n", numOsalFds);
 
                 for (i = 0; i < numOsalFds; i++)
                 {
@@ -361,7 +350,7 @@ static void initPoll (void)
                         osal_fds[i];
                     pollFds[i + (numPollFds - numOsalFds)].events =
                         POLLIN;
-                    //uiPrintfEx(trUNMASKABLE, "osal timer idx:%d fd:%d\n", i+(numPollFds - numOsalFds), pollFds[i+(numPollFds - numOsalFds)].fd) ;
+                    uiPrintfEx(trUNMASKABLE, "osal timer idx:%d fd:%d\n", i+(numPollFds - numOsalFds), pollFds[i+(numPollFds - numOsalFds)].fd) ;
                 }
 
                 free (osal_fds);
@@ -399,7 +388,7 @@ void Hal_ProcessPoll (void)
 	ret = poll (pollFds, numPollFds, polltimeOut);
 	pollWait = FALSE;
 	sigprocmask (SIG_SETMASK, &origmask, NULL);
-	//uiPrintfEx(trUNMASKABLE,    "poll--\n" );
+	uiPrintfEx(trUNMASKABLE,    "poll--\n" );
 
 	//reset the poll timout to default
 	SetPollTimeOut (POLL_TIMEOUT);
@@ -409,14 +398,6 @@ void Hal_ProcessPoll (void)
 		int i;
 		/* An event on one of the fds has occurred. */
 
-#ifdef USE_KEY
-		//check key
-		if ((pollFds[keyFdIdx].revents))
-        {
-            HalKeyPoll ();
-        }
-		else
-#endif
         {
             //If no other event then it must have been a timer
             osalTimerUpdate (0);
@@ -426,7 +407,7 @@ void Hal_ProcessPoll (void)
         {
             if (pollFds[i].revents)
             {
-                //uiPrintfEx(trUNMASKABLE,    "poll on %d, fd:%d\n", i, pollFds[i].fd );
+                uiPrintfEx(trUNMASKABLE,    "poll on %d, fd:%d\n", i, pollFds[i].fd );
             }
         }
 

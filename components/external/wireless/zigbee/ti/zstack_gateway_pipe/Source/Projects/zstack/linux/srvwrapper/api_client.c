@@ -49,13 +49,16 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <signal.h>
-//#include <bits/local_lim.h>
 #include <fcntl.h>
 
 #include "hal_types.h"
 #include "hal_rpc.h"
 #include "api_lnx_ipc_rpc.h"
 #include "api_client.h"
+
+#undef SERVER_NAME
+#define SERVER_NAME ZSTACKZNP_SRVR
+
 #include "trace.h"
 
 #include "config.h"
@@ -249,7 +252,7 @@ apicHandle_t apicInit( const char *srvName, bool getVer, pfnAsyncMsgCb pFn )
 
 	if ( !pInstance )
 	{
-		uiPrintf( "[ERR] apicInit malloc failed\n" );
+		uiPrintfEx(trINFO, "[ERR] apicInit malloc failed\n" );
 		return pInstance;
 	}
 
@@ -303,7 +306,7 @@ apicHandle_t apicInit( const char *srvName, bool getVer, pfnAsyncMsgCb pFn )
 	/**********************************************************************
 	 * Open listen pipe for getting a unique pipe id
 	 */
-	uiPrintf( "Trying to open listen pipes...\n" );
+	uiPrintfEx(trINFO, "Trying to open listen pipes...\n" );
 	if ((mkfifo (readPipePathName, O_CREAT | O_EXCL) < 0) && (errno != EEXIST))
 	{
 		uiPrintf ("cannot create fifo %s\n", readPipePathName);
@@ -356,7 +359,7 @@ apicHandle_t apicInit( const char *srvName, bool getVer, pfnAsyncMsgCb pFn )
 	 * Open to the API server pipes
 	 **********************************************************************/
 
-	uiPrintf( "Trying to open regular pipes...\n" );
+	uiPrintfEx(trINFO, "Trying to open regular pipes...\n" );
 	if ((mkfifo (readPipePathName, O_CREAT | O_EXCL) < 0) && (errno != EEXIST))
 	{
 		uiPrintf ("cannot create fifo %s\n", readPipePathName);
@@ -390,7 +393,7 @@ apicHandle_t apicInit( const char *srvName, bool getVer, pfnAsyncMsgCb pFn )
 		return NULL;
 	}
 
-	uiPrintf( "Both read and wirte pipes opened.\n" );
+	uiPrintfEx(trINFO, "Both read and wirte pipes opened.\n" );
 
     close(tmpReadPipe);
     close(tmpWritePipe);
@@ -406,7 +409,7 @@ apicHandle_t apicInit( const char *srvName, bool getVer, pfnAsyncMsgCb pFn )
 			pInstance ) )
 	{
 		// thread creation failed
-		uiPrintf( "Failed to create RTIS LNX IPC Client read thread\n" );
+		uiPrintfEx(trINFO, "Failed to create RTIS LNX IPC Client read thread\n" );
         close( pInstance->sAPIreadPipe);
         close( pInstance->sAPIwritePipe);
 		delSyncRes( pInstance );
@@ -422,7 +425,7 @@ apicHandle_t apicInit( const char *srvName, bool getVer, pfnAsyncMsgCb pFn )
 			pInstance ) )
 	{
 		// thread creation failed
-		uiPrintf( "Failed to create RTIS LNX IPC Client handle thread\n" );
+		uiPrintfEx(trINFO, "Failed to create RTIS LNX IPC Client handle thread\n" );
         close( pInstance->sAPIreadPipe);
         close( pInstance->sAPIwritePipe);
 		pthread_join( pInstance->SISRThreadId, NULL );
@@ -438,17 +441,17 @@ apicHandle_t apicInit( const char *srvName, bool getVer, pfnAsyncMsgCb pFn )
 
 		//Read Software Version.
 		apicReadVersionReq( pInstance, version );
-		uiPrintf( "Connected to Server v%d.%d.%d\n", version[0], version[1],\
+		uiPrintfEx(trINFO, "Connected to Server v%d.%d.%d\n", version[0], version[1],\
 				version[2] );
 
 		//Read Number of Active Connection Version.
 		apicReadParamReq( pInstance, API_LNX_PARAM_NB_CONNECTIONS, 2, param );
-		uiPrintf( "%d active connection , out of %d maximum connections\n", param[0],
+		uiPrintfEx(trINFO, "%d active connection , out of %d maximum connections\n", param[0],
 				param[1] );
 
 		//Check Which interface is used.
 		apicReadParamReq( pInstance, API_LNX_PARAM_DEVICE_USED, 1, param );
-		uiPrintf( "Interface used y server: %d (0 = UART, 1 = SPI, 2 = I2C)\n",
+		uiPrintfEx(trINFO, "Interface used y server: %d (0 = UART, 1 = SPI, 2 = I2C)\n",
 				param[0] );
 	}
 
@@ -573,14 +576,14 @@ uint8 *apicSendSynchData( apicHandle_t handle, uint8 subSys, uint8 cmdId,
 	if ( len == 0xFFFFu )
 #endif // API_CLIENT_8BIT_LEN
 	{
-		uiPrintf( "[ERR] apicSendSynchData failed due to excessive length\n" );
+		uiPrintfEx(trINFO, "[ERR] apicSendSynchData failed due to excessive length\n" );
 		return NULL;
 	}
 
 	hdr = malloc( sizeof(apicMsgHdr_t) + len );
 	if ( !hdr )
 	{
-		uiPrintf( "[ERR] apicSendSynchData failed due to malloc() failure\n" );
+		uiPrintfEx(trINFO, "[ERR] apicSendSynchData failed due to malloc() failure\n" );
 		return NULL;
 	}
 	hdr->subSys = subSys & RPC_SUBSYSTEM_MASK;
@@ -598,24 +601,26 @@ uint8 *apicSendSynchData( apicHandle_t handle, uint8 subSys, uint8 cmdId,
 #endif // API_CLIENT_8BIT_LEN
 	memcpy( hdr + 1, pData, len );
 
-	uiPrintfEx(trINFO, "preparing to write %d bytes, subSys 0x%.2X, cmdId 0x%.2X, pData:\n",\
+	uiPrintfEx(trINFO, "preparing to write %d bytes, subSys 0x%.2X, cmdId 0x%.2X, pData:",\
 			len,\
 			subSys,\
 			cmdId );
 
 	for ( i = 0; i < len; i++ )
 	{
-		uiPrintfEx(trINFO, " 0x%.2X\n", pData[i] );
+		rt_kprintf(" 0x%.2X", pData[i] );
 	}
 
+	rt_kprintf("\n");
+
 	// Lock mutex
-	uiPrintfEx(trINFO, "[MUTEX] Lock SRSP Mutex" );
+	uiPrintfEx(trINFO, "[MUTEX] Lock SRSP Mutex\n" );
 	while ( (mutexRet = pthread_mutex_trylock( &pInstance->clientSREQmutex ))
 			== EBUSY )
 	{
 		if ( writeOnce == 0 )
 		{
-			uiPrintfEx(trINFO, "\n[MUTEX] SRSP Mutex busy" );
+			uiPrintfEx(trINFO, "[MUTEX] SRSP Mutex busy\n" );
 			rtt_fflush( rtt_stdout );
 			writeOnce++;
 		}
@@ -636,7 +641,7 @@ uint8 *apicSendSynchData( apicHandle_t handle, uint8 subSys, uint8 cmdId,
 		}
 	}
 
-	uiPrintfEx(trINFO, "\n[MUTEX] SRSP Lock status: %d\n", mutexRet );
+	uiPrintfEx(trINFO, "[MUTEX] SRSP Lock status: %d\n", mutexRet );
 
 	len += sizeof(*hdr);
 	ptr = (uint8 *) hdr;
@@ -694,9 +699,11 @@ uint8 *apicSendSynchData( apicHandle_t handle, uint8 subSys, uint8 cmdId,
 				i++ )
 		{
 			//GUNCOM Need to fix this issue, cannot comment out line belo
-			//uiPrintf( "0x%.2X\n",(unsigned int)((uint8 *)(pInstance->srsp_msg + 1)[i]) );
-			uiPrintfEx(trINFO, "0x%.2X\n", ((uint8 *)(&(pInstance->srsp_msg[1])))[i]);
+			//uiPrintfEx(trINFO, "0x%.2X\n",(unsigned int)((uint8 *)(pInstance->srsp_msg + 1)[i]) );
+			rt_kprintf(" 0x%.2X", ((uint8 *)(&(pInstance->srsp_msg[1])))[i]);
 		}
+
+		rt_kprintf("\n");
 
 		// Copy response back in transmission buffer for processing
 		rspMsg = pInstance->srsp_msg;
@@ -721,7 +728,7 @@ uint8 *apicSendSynchData( apicHandle_t handle, uint8 subSys, uint8 cmdId,
 	pInstance->numOfReceivedSRSPbytes = 0;
 
 	// Now unlock the mutex before returning
-	//uiPrintf( "[MUTEX] Unlock SRSP Mutex\n" );
+	//uiPrintfEx(trINFO, "[MUTEX] Unlock SRSP Mutex\n" );
 	pthread_mutex_unlock( &pInstance->clientSREQmutex );
 
 	if ( rspMsg )
@@ -792,7 +799,7 @@ void apicSendAsynchData( apicHandle_t handle, uint8 subSys, uint8 cmdId,
 #ifdef API_CLIENT_8BIT_LEN
 	if (len > 255)
 	{
-		uiPrintf( "[ERR] apicSendAsynchData called with excessive length %d\n",\
+		uiPrintfEx(trINFO, "[ERR] apicSendAsynchData called with excessive length %d\n",\
 				len );
 		return;
 	}
@@ -800,7 +807,7 @@ void apicSendAsynchData( apicHandle_t handle, uint8 subSys, uint8 cmdId,
 	hdr = malloc( sizeof(apicMsgHdr_t) + len );
 	if ( !hdr )
 	{
-		uiPrintf( "[ERR] apicSendAsynchData failed malloc()\n" );
+		uiPrintfEx(trINFO, "[ERR] apicSendAsynchData failed malloc()\n" );
 		return;
 	}
 
@@ -820,15 +827,21 @@ void apicSendAsynchData( apicHandle_t handle, uint8 subSys, uint8 cmdId,
 	hdr->lenH = (uint8)( len >> 8 );
 #endif // API_CLIENT_8BIT_LEN
 	memcpy( hdr + 1, pData, len );
-	uiPrintfEx(trINFO, "trying to write %d bytes,\t subSys 0x%.2X,"\
-			" cmdId 0x%.2X, pData:\t",\
+	uiPrintfEx(trINFO, "trying to write %d bytes, subSys 0x%.2X,"\
+			" cmdId 0x%.2X, pData",\
 			len,\
 			subSys,\
 			cmdId );
+	if(len>0)
+	{
+		rt_kprintf(":");
+	}
 	for ( i = 0; i < len; i++ )
 	{
-		uiPrintfEx(trINFO, " 0x%.2X", pData[i] );
+		rt_kprintf(" 0x%.2X", pData[i] );
 	}
+
+	rt_kprintf("\n");
 
 	ptr = (uint8 *) hdr;
 	len += sizeof(apicMsgHdr_t);
@@ -932,7 +945,7 @@ static void initSyncRes( apicInstance_t *pInstance )
 	pthread_cond_init( &pInstance->clientSREQcond, NULL );
 	if ( sem_init( &pInstance->clientAREQsem, 0, 0 ) != 0 )
 	{
-		//uiPrintf( "[ERR] sem_init() failed\n" );
+		//uiPrintfEx(trINFO, "[ERR] sem_init() failed\n" );
 		exit( 1 );
 	}
 }
@@ -1014,15 +1027,17 @@ static void *SISreadThreadFunc( void *ptr )
 				{
 					int i;
 					uiPrintfEx(trINFO, "Received %d bytes,\t subSys 0x%.2X,"\
-							" cmdId 0x%.2X, pData:\n",\
+							" cmdId 0x%.2X, pData:",\
 							pMsg->len, pMsg->subSys, pMsg->cmdId );
 					for ( i = 0; i < n; i++ )
 					{
 						//GUNCOM Need to fix this print statement, gives error
 						//uiPrintfEx(trINFO, " 0x%.2X\n", (uint8)((uint8 *)(pMsg+1)[i]) );
 						//uiPrintfEx(trINFO, " 0x%X\n", (uint8)((uint8 *)(pMsg+1)[i]) );
-						uiPrintfEx(trINFO, " 0x%X\n",	((uint8 *)(&pMsg[1]))[i]	);
+						rt_kprintf(" 0x%X\n",	((uint8 *)(&pMsg[1]))[i]	);
 					}
+
+					rt_kprintf("\n");
 
 					if ( (pMsg->subSys & RPC_CMD_TYPE_MASK) == RPC_CMD_SRSP )
 					{
@@ -1033,14 +1048,14 @@ static void *SISreadThreadFunc( void *ptr )
 
 						if ( pthread_mutex_lock( &pInstance->clientSREQmutex ) != 0 )
 						{
-							uiPrintf( "[ERR] Mutex lock failed while handling SRSP\n" );
+							uiPrintfEx(trINFO, "[ERR] Mutex lock failed while handling SRSP\n" );
 							exit( 1 );
 						}
 
 						if ( pInstance->srsp_msg )
 						{
 							// Unhandled SRSP message must be freed
-							uiPrintf( "[ERR] Unhandled SRSP cleared\n" );
+							uiPrintfEx(trINFO, "[ERR] Unhandled SRSP cleared\n" );
 							free( pInstance->srsp_msg );
 						}
 						pInstance->srsp_msg = pMsg;
@@ -1050,7 +1065,7 @@ static void *SISreadThreadFunc( void *ptr )
 					}
 					else if ( (pMsg->subSys & RPC_CMD_TYPE_MASK) == RPC_CMD_AREQ )
 					{
-						uiPrintf( "RPC_CMD_AREQ cmdId: 0x%.2X\n", pMsg->cmdId );
+						uiPrintfEx(trINFO, "RPC_CMD_AREQ cmdId: 0x%.2X\n", pMsg->cmdId );
 
 						pInstance->areqRxMsgCount++;
 						uiPrintfEx(trINFO, "\n[DBG] Allocated \t@ 0x%.16X"\
@@ -1062,7 +1077,7 @@ static void *SISreadThreadFunc( void *ptr )
 								(unsigned int)pMsg );
 						if ( pthread_mutex_lock( &pInstance->clientAREQmutex ) != 0 )
 						{
-							uiPrintf( "[ERR] pthread_mutex_lock() failed"\
+							uiPrintfEx(trINFO, "[ERR] pthread_mutex_lock() failed"\
 									" while processing AREQ\n" );
 							exit( 1 );
 						}
@@ -1091,14 +1106,14 @@ static void *SISreadThreadFunc( void *ptr )
 					else
 					{
 						// Cannot handle synchronous requests from RNP
-						uiPrintf( "ERR: Received SREQ\n" );
+						uiPrintfEx(trINFO, "ERR: Received SREQ\n" );
 						free( pMsg );
 					}
 				}
 				else
 				{
 					// Possible if the socket connection is gone in the middle
-					uiPrintf( "[ERR] Connection lost in the middle of reception\n"\
+					uiPrintfEx(trINFO, "[ERR] Connection lost in the middle of reception\n"\
 							"- n:%d, len:%d\n", n, pMsg->len );
 					free( pMsg );
 				}
@@ -1107,7 +1122,7 @@ static void *SISreadThreadFunc( void *ptr )
 		else
 		{
 			// Possible if the socket connection is gone in the middle
-			uiPrintf( "[ERR] Connection lost in the middle of header reception"\
+			uiPrintfEx(trINFO, "[ERR] Connection lost in the middle of header reception"\
 					" - n: %d\n", n );
 			done = 1;
 		}
@@ -1143,13 +1158,13 @@ static void *SIShandleThreadFunc( void *ptr )
 
 		if ( semresult != 0 )
 		{
-			uiPrintf( "[ERR] sem_wait() for AREQ receive failed\n" );
+			uiPrintfEx(trINFO, "[ERR] sem_wait() for AREQ receive failed\n" );
 			exit( 1 );
 		}
 
 		if ( pthread_mutex_lock( &pInstance->clientAREQmutex ) != 0 )
 		{
-			uiPrintf( "[ERR] pthread_mutex_lock() for AREQ receive failed\n" );
+			uiPrintfEx(trINFO, "[ERR] pthread_mutex_lock() for AREQ receive failed\n" );
 			exit( 1 );
 		}
 

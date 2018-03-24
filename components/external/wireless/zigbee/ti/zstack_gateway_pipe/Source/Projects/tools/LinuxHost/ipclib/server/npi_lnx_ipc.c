@@ -69,6 +69,10 @@
 #include "common/npi_lnx_ipc_rpc.h"
 
 #include "npi_lnx_ipc.h"
+#include "trace.h"
+
+#undef SERVER_NAME
+#define SERVER_NAME	NPI_OS_IPC_SRV
 
 #if (defined NPI_SPI) && (NPI_SPI == TRUE)
 #include "npi_lnx_spi.h"
@@ -96,12 +100,12 @@
 #endif
 
 #ifdef __BIG_DEBUG__
-#define debug_printf(fmt, ...) printf( fmt, ##__VA_ARGS__)
+#define debug_printf(fmt, ...) 	printf( fmt, ##__VA_ARGS__)
 #else
-#define debug_printf(fmt, ...) st (if (__BIG_DEBUG_ACTIVE == TRUE) printf( fmt, ##__VA_ARGS__);)
+#define debug_printf(fmt, ...) 	st (if (__BIG_DEBUG_ACTIVE == TRUE) printf( fmt, ##__VA_ARGS__);)
 #endif
 
-#define time_printf(fmt, ...) st (if (__DEBUG_TIME_ACTIVE == TRUE) printf( fmt, ##__VA_ARGS__);)
+#define time_printf(fmt, ...) 	st (if (__DEBUG_TIME_ACTIVE == TRUE) printf( fmt, ##__VA_ARGS__);)
 
 /**************************************************************************************************
  *                                        Externals
@@ -413,7 +417,7 @@ void npi_rtt_ipc_main(void* args)
 	}
 	else
 	{
-		printf("Too many arguments\n");
+		uiPrintfEx(trINFO, "Too many arguments\n");
 	}
 
 	// Allocate memory for string buffer and configuration buffer
@@ -425,17 +429,17 @@ void npi_rtt_ipc_main(void* args)
 	memset(devPath, 0, 128);
 	memset(logPath, 0, 128);
 	gpioCfg = (halGpioCfg_t**) malloc(3 * sizeof(halGpioCfg_t*));
-	debug_printf("gpioCfg \t\t\t\t%p\n",
+	uiPrintfEx(trINFO, "gpioCfg \t\t\t\t%p\n",
 			(void *)&(gpioCfg));
 	for (gpioIdx = 0; gpioIdx < 3; gpioIdx++)
 	{
 		gpioCfg[gpioIdx] = (halGpioCfg_t*) malloc(sizeof(halGpioCfg_t));
 		memset(gpioCfg[gpioIdx], 0, sizeof(halGpioCfg_t));
-		debug_printf("gpioCfg[%d] \t\t\t\t%p\n",
+		uiPrintfEx(trINFO, "gpioCfg[%d] \t\t\t\t%p\n",
 				gpioIdx, (void *)&(gpioCfg[gpioIdx]));
-		debug_printf("gpioCfg[%d].gpio \t\t\t%p\n",
+		uiPrintfEx(trINFO, "gpioCfg[%d].gpio \t\t\t%p\n",
 				gpioIdx, (void *)&(gpioCfg[gpioIdx]->gpio));
-		debug_printf("gpioCfg[%d].levelshifter \t\t%p\n",
+		uiPrintfEx(trINFO, "gpioCfg[%d].levelshifter \t\t%p\n",
 				gpioIdx, (void *)&(gpioCfg[gpioIdx]->levelshifter));
 	}
 
@@ -444,7 +448,7 @@ void npi_rtt_ipc_main(void* args)
 	if (serialCfgFd == NULL)
 	{
 		//                            debug_
-		printf("Could not open file '%s'\n", configFilePath);
+		uiPrintfEx(trINFO, "Could not open file '%s'\n", configFilePath);
 		npi_ipc_errno = NPI_LNX_ERROR_IPC_OPEN_REMOTI_RNP_CFG;
 		NPI_LNX_IPC_Exit(NPI_LNX_FAILURE);
 	}
@@ -452,7 +456,7 @@ void npi_rtt_ipc_main(void* args)
 	// Get device type
 	if (NPI_LNX_FAILURE == (SerialConfigParser(serialCfgFd, "DEVICE", "deviceKey", strBuf)))
 	{
-		printf("Could not find 'deviceKey' inside config file '%s'\n", configFilePath);
+		uiPrintfEx(trINFO, "Could not find 'deviceKey' inside config file '%s'\n", configFilePath);
 		npi_ipc_errno = NPI_LNX_ERROR_IPC_REMOTI_RNP_CFG_PARSER_DEVICE_KEY;
 		NPI_LNX_IPC_Exit(NPI_LNX_FAILURE);
 	}
@@ -460,31 +464,31 @@ void npi_rtt_ipc_main(void* args)
 	// Copy from buffer to variable
 	devIdx = strBuf[0] - '0';
 	//            debug_
-	printf("deviceKey = %i  (%s)\n", devIdx, strBuf);
+	uiPrintfEx(trINFO, "deviceKey = %i  (%s)\n", devIdx, strBuf);
 
 	// Get path to the device
 	strBuf = pStrBufRoot;
 	if (NPI_LNX_FAILURE == (SerialConfigParser(serialCfgFd, "DEVICE", "devPath", strBuf)))
 	{
-		printf("Could not find 'devPath' inside config file '%s'\n", configFilePath);
+		uiPrintfEx(trINFO, "Could not find 'devPath' inside config file '%s'\n", configFilePath);
 		npi_ipc_errno = NPI_LNX_ERROR_IPC_REMOTI_RNP_CFG_PARSER_DEVICE_PATH;
 		NPI_LNX_IPC_Exit(NPI_LNX_FAILURE);
 	}
 	// Copy from buffer to variable
 	memcpy(devPath, strBuf, strlen(strBuf));
-	printf("devPath = '%s'\n", devPath);
+	uiPrintfEx(trINFO, "devPath = '%s'\n", devPath);
 
 	// Get path to the log file
 	strBuf = pStrBufRoot;
 	if (NPI_LNX_FAILURE == (SerialConfigParser(serialCfgFd, "LOG", "log", strBuf)))
 	{
-		printf("Could not find 'log' inside config file '%s'\n", configFilePath);
+		uiPrintfEx(trINFO, "Could not find 'log' inside config file '%s'\n", configFilePath);
 		npi_ipc_errno = NPI_LNX_ERROR_IPC_REMOTI_RNP_CFG_PARSER_LOG_PATH;
 		NPI_LNX_IPC_Exit(NPI_LNX_FAILURE);
 	}
 	// Copy from buffer to variable
 	memcpy(logPath, strBuf, strlen(strBuf));
-	printf("logPath = '%s'\n", logPath);
+	uiPrintfEx(trINFO, "logPath = '%s'\n", logPath);
 
 	// GPIO configuration
 	if ((devIdx == 1) || (devIdx == 2))
@@ -492,7 +496,7 @@ void npi_rtt_ipc_main(void* args)
 		for (gpioIdx = 0; gpioIdx < 3; gpioIdx++)
 		{
 			// Get SRDY, MRDY or RESET GPIO
-			debug_printf("gpioCfg[gpioIdx]->gpio \t\t\t%p\n",
+			uiPrintfEx(trINFO, "gpioCfg[gpioIdx]->gpio \t\t\t%p\n",
 					(void *)&(gpioCfg[gpioIdx]->gpio));
 
 			// Get SRDY, MRDY or RESET GPIO value
@@ -501,17 +505,17 @@ void npi_rtt_ipc_main(void* args)
 					"value", strBuf)))
 			{
 			// Copy from buffer to variable
-				debug_printf("strBuf \t\t\t\t\t%p\n",
+				uiPrintfEx(trINFO, "strBuf \t\t\t\t\t%p\n",
 						(void *)&strBuf);
-				debug_printf("gpioCfg[gpioIdx]->gpio.value \t\t%p\n",
+				uiPrintfEx(trINFO, "gpioCfg[gpioIdx]->gpio.value \t\t%p\n",
 						(void *)&(gpioCfg[gpioIdx]->gpio.value));
 				memcpy(gpioCfg[gpioIdx]->gpio.value, strBuf, strlen(strBuf));
-				debug_printf("gpioCfg[%i]->gpio.value = '%s'\n",
+				uiPrintfEx(trINFO, "gpioCfg[%i]->gpio.value = '%s'\n",
 						gpioIdx, gpioCfg[gpioIdx]->gpio.value);
 			}
 			else
 			{
-				printf("[CONFIG] ERROR , key 'value' is missing for mandatory GPIO %s\n", sectionNamesArray[gpioIdx][0]);
+				uiPrintfEx(trINFO, "[CONFIG] ERROR , key 'value' is missing for mandatory GPIO %s\n", sectionNamesArray[gpioIdx][0]);
 				npi_ipc_errno = NPI_LNX_ERROR_IPC_REMOTI_RNP_CFG_PARSER_DEVICE_GPIO(gpioIdx, 0, devIdx);
 				NPI_LNX_IPC_Exit(NPI_LNX_FAILURE);
 			}
@@ -522,18 +526,18 @@ void npi_rtt_ipc_main(void* args)
 					"direction", strBuf)))
 			{
 			// Copy from buffer to variable
-				debug_printf("strBuf \t\t\t\t\t%p\n",
+				uiPrintfEx(trINFO, "strBuf \t\t\t\t\t%p\n",
 						(void *)&strBuf);
-				debug_printf("gpioCfg[gpioIdx]->gpio.direction \t%p\n",
+				uiPrintfEx(trINFO, "gpioCfg[gpioIdx]->gpio.direction \t%p\n",
 						(void *)&(gpioCfg[gpioIdx]->gpio.direction));
 				memcpy(gpioCfg[gpioIdx]->gpio.direction, strBuf,
 						strlen(strBuf));
-				debug_printf("gpioCfg[%i]->gpio.direction = '%s'\n",
+				uiPrintfEx(trINFO, "gpioCfg[%i]->gpio.direction = '%s'\n",
 						gpioIdx, gpioCfg[gpioIdx]->gpio.direction);
 			}
 			else
 			{
-				printf("[CONFIG] ERROR , key 'direction' is missing for mandatory GPIO %s\n", sectionNamesArray[gpioIdx][0]);
+				uiPrintfEx(trINFO, "[CONFIG] ERROR , key 'direction' is missing for mandatory GPIO %s\n", sectionNamesArray[gpioIdx][0]);
 				npi_ipc_errno = NPI_LNX_ERROR_IPC_REMOTI_RNP_CFG_PARSER_DEVICE_GPIO(gpioIdx, 0, devIdx);
 				NPI_LNX_IPC_Exit(NPI_LNX_FAILURE);
 			}
@@ -547,17 +551,17 @@ void npi_rtt_ipc_main(void* args)
 						"edge", strBuf)))
 				{
 					// Copy from buffer to variable
-					debug_printf("strBuf \t\t\t\t\t%p\n",
+					uiPrintfEx(trINFO, "strBuf \t\t\t\t\t%p\n",
 							(void *)&strBuf);
-					debug_printf("gpioCfg[gpioIdx]->gpio.edge \t%p\n",
+					uiPrintfEx(trINFO, "gpioCfg[gpioIdx]->gpio.edge \t%p\n",
 							(void *)&(gpioCfg[gpioIdx]->gpio.edge));
 					memcpy(gpioCfg[gpioIdx]->gpio.edge, strBuf, strlen(strBuf));
-					debug_printf("gpioCfg[%i]->gpio.edge = '%s'\n",
+					uiPrintfEx(trINFO, "gpioCfg[%i]->gpio.edge = '%s'\n",
 							gpioIdx, gpioCfg[gpioIdx]->gpio.edge);
 				}
 				else
 				{
-					printf("[CONFIG] ERROR , key 'edge' is missing for mandatory GPIO %s\n", sectionNamesArray[gpioIdx][0]);
+					uiPrintfEx(trINFO, "[CONFIG] ERROR , key 'edge' is missing for mandatory GPIO %s\n", sectionNamesArray[gpioIdx][0]);
 					npi_ipc_errno = NPI_LNX_ERROR_IPC_REMOTI_RNP_CFG_PARSER_DEVICE_GPIO(gpioIdx, 0, devIdx);
 					NPI_LNX_IPC_Exit(NPI_LNX_FAILURE);
 				}
@@ -571,14 +575,14 @@ void npi_rtt_ipc_main(void* args)
 			{
 				// Copy from buffer to variable
 				gpioCfg[gpioIdx]->gpio.active_high_low = strBuf[0] - '0';
-				debug_printf("gpioCfg[%i]->gpio.active_high_low = %d\n",
+				uiPrintfEx(trINFO, "gpioCfg[%i]->gpio.active_high_low = %d\n",
 							gpioIdx, gpioCfg[gpioIdx]->gpio.active_high_low);
 			}
 			else
-				printf("[CONFIG] Warning , key 'active_high_low' is missing for optional GPIO %s\n", sectionNamesArray[gpioIdx][0]);
+				uiPrintfEx(trINFO, "[CONFIG] Warning , key 'active_high_low' is missing for optional GPIO %s\n", sectionNamesArray[gpioIdx][0]);
 
 			// Get SRDY, MRDY or RESET Level Shifter
-			debug_printf("gpioCfg[gpioIdx]->levelshifter \t\t\t%p\n",
+			uiPrintfEx(trINFO, "gpioCfg[gpioIdx]->levelshifter \t\t\t%p\n",
 					(void *)&(gpioCfg[gpioIdx]->levelshifter));
 
 			// Get SRDY, MRDY or RESET Level Shifter value
@@ -589,11 +593,11 @@ void npi_rtt_ipc_main(void* args)
 				// Copy from buffer to variable
 				memcpy(gpioCfg[gpioIdx]->levelshifter.value, strBuf,
 						strlen(strBuf));
-				debug_printf("gpioCfg[%i]->levelshifter.value = '%s'\n",
+				uiPrintfEx(trINFO, "gpioCfg[%i]->levelshifter.value = '%s'\n",
 							gpioIdx, gpioCfg[gpioIdx]->levelshifter.value);
 			}
 			else
-				printf("[CONFIG] Warning , key 'value' is missing for optional GPIO %s\n", sectionNamesArray[gpioIdx][1]);
+				uiPrintfEx(trINFO, "[CONFIG] Warning , key 'value' is missing for optional GPIO %s\n", sectionNamesArray[gpioIdx][1]);
 
 			// Get SRDY, MRDY or RESET Level Shifter direction
 			strBuf = pStrBufRoot;
@@ -603,11 +607,11 @@ void npi_rtt_ipc_main(void* args)
 				// Copy from buffer to variable
 				memcpy(gpioCfg[gpioIdx]->levelshifter.direction, strBuf,
 						strlen(strBuf));
-				debug_printf("gpioCfg[%i]->levelshifter.direction = '%s'\n",
+				uiPrintfEx(trINFO, "gpioCfg[%i]->levelshifter.direction = '%s'\n",
 							gpioIdx, gpioCfg[gpioIdx]->levelshifter.direction);
 			}
 			else
-				printf("[CONFIG] Warning , key 'direction' is missing for optional GPIO %s\n", sectionNamesArray[gpioIdx][1]);
+				uiPrintfEx(trINFO, "[CONFIG] Warning , key 'direction' is missing for optional GPIO %s\n", sectionNamesArray[gpioIdx][1]);
 
 
 			// Get SRDY, MRDY or RESET Level Shifter Active High/Low
@@ -617,11 +621,11 @@ void npi_rtt_ipc_main(void* args)
 			{
 				// Copy from buffer to variable
 				gpioCfg[gpioIdx]->levelshifter.active_high_low = atoi(strBuf);
-				debug_printf("gpioCfg[%i]->levelshifter.active_high_low = %d\n",
+				uiPrintfEx(trINFO, "gpioCfg[%i]->levelshifter.active_high_low = %d\n",
 						gpioIdx, gpioCfg[gpioIdx]->levelshifter.active_high_low);
 			}
 			else
-				printf("[CONFIG] Warning , key 'active_high_low' is missing for optional GPIO %s\n", sectionNamesArray[gpioIdx][1]);
+				uiPrintfEx(trINFO, "[CONFIG] Warning , key 'active_high_low' is missing for optional GPIO %s\n", sectionNamesArray[gpioIdx][1]);
 		}
 	}
 
@@ -786,11 +790,11 @@ void npi_rtt_ipc_main(void* args)
 	//mkfifo and open pipes
 	if ((mkfifo (NPI_IPC_LISTEN_PIPE_CLIENT2SERVER, O_CREAT | O_EXCL) < 0) && (errno != EEXIST))
 	{
-		printf ("cannot create fifo %s\n", NPI_IPC_LISTEN_PIPE_CLIENT2SERVER);
+		uiPrintfEx(trINFO, "cannot create fifo %s\n", NPI_IPC_LISTEN_PIPE_CLIENT2SERVER);
 	}
 	if ((mkfifo (NPI_IPC_LISTEN_PIPE_SERVER2CLIENT, O_CREAT | O_EXCL) < 0) && (errno != EEXIST))
 	{
-		printf ("cannot create fifo %s\n", NPI_IPC_LISTEN_PIPE_SERVER2CLIENT);
+		uiPrintfEx(trINFO, "cannot create fifo %s\n", NPI_IPC_LISTEN_PIPE_SERVER2CLIENT);
 	}
 
 	memset(npi_ipc_read_fifo_path, '\0', FIFO_PATH_BUFFER_LEN);
@@ -799,12 +803,12 @@ void npi_rtt_ipc_main(void* args)
 	listenPipeReadHndl = open(npi_ipc_read_fifo_path, ZB_LISTEN_PIPE_OPEN_FLAG, 0);
 	if (listenPipeReadHndl == -1)
 	{
-		printf ("open %s for read error\n", npi_ipc_read_fifo_path);
+		uiPrintfEx(trINFO, "open %s for read error\n", npi_ipc_read_fifo_path);
 		exit (-1);
 	}
 	else
 	{
-		printf("open npi_ipc_listen_read_fifo ok with fd = %d.\n", listenPipeReadHndl);
+		uiPrintfEx(trINFO, "open npi_ipc_listen_read_fifo ok with fd = %d.\n", listenPipeReadHndl);
 	}
 
 	// Connection main loop. Cannot get here with ret != SUCCESS
@@ -818,7 +822,7 @@ void npi_rtt_ipc_main(void* args)
 
 	fdmax = listenPipeReadHndl;
 
-	printf("waiting for first connection on #%d...\n", listenPipeReadHndl);
+	uiPrintfEx(trINFO, "waiting for first connection on #%d...\n", listenPipeReadHndl);
 
 	while (ret == NPI_LNX_SUCCESS)
 	{
@@ -847,17 +851,17 @@ void npi_rtt_ipc_main(void* args)
                     n = read (listenPipeReadHndl, listen_buf, SERVER_LISTEN_BUF_SIZE);
                     if (n <= 0)
                     {
-						printf("read failed for n <= 0\n");
+                    	uiPrintfEx(trINFO, "read failed for n <= 0\n");
                         if (n < 0)
                         {
                             perror ("read");
-							printf("NPI_LNX_ERROR_IPC_RECV_DATA_CHECK_ERRNO\n");
+                            uiPrintfEx(trINFO, "NPI_LNX_ERROR_IPC_RECV_DATA_CHECK_ERRNO\n");
                             npi_ipc_errno = NPI_LNX_ERROR_IPC_RECV_DATA_CHECK_ERRNO;
                             ret = NPI_LNX_FAILURE;
                         }
                         else
                         {
-							printf("NPI_LNX_ERROR_IPC_RECV_DATA_DISCONNECT\n");
+                        	uiPrintfEx(trINFO, "NPI_LNX_ERROR_IPC_RECV_DATA_DISCONNECT\n");
                             npi_ipc_errno = NPI_LNX_ERROR_IPC_RECV_DATA_DISCONNECT;
                             //ret = NPI_LNX_FAILURE;
 							//move out this fd from fd_set and reopen the pipe for listening and add to fd_set
@@ -867,7 +871,7 @@ void npi_rtt_ipc_main(void* args)
     						listenPipeReadHndl = open (npi_ipc_read_fifo_path, ZB_LISTEN_PIPE_OPEN_FLAG, 0);
     						if (listenPipeReadHndl == -1)
     						{
-        						printf ("open %s for read error\n", npi_ipc_read_fifo_path);
+    							uiPrintfEx(trINFO, "open %s for read error\n", npi_ipc_read_fifo_path);
        		 					exit (-1);
 						    }
                             FD_SET (listenPipeReadHndl, &activePipesFDs);
@@ -880,7 +884,7 @@ void npi_rtt_ipc_main(void* args)
 					else
 					{
 						listen_buf[n] = '\0';
-                        printf("read %d bytes from listenPipeReadHndl of string is %s.\n",n,listen_buf);
+						uiPrintfEx(trINFO, "read %d bytes from listenPipeReadHndl of string is %s.\n",n,listen_buf);
                     	if (!strncmp(listen_buf, NPI_IPC_LISTEN_PIPE_CHECK_STRING, strlen(NPI_IPC_LISTEN_PIPE_CHECK_STRING)))
                     	{
                     		//npi_ipc_write_fifo_path
@@ -891,7 +895,7 @@ void npi_rtt_ipc_main(void* args)
                         	{
                             	if (errno == ENXIO)
                             	{
-                                	printf("open error; no reading process\n");
+                            		uiPrintfEx(trINFO, "open error; no reading process\n");
                                 	ret = NPI_LNX_FAILURE;
                                 	break;
                             	}
@@ -905,11 +909,11 @@ void npi_rtt_ipc_main(void* args)
 
                         	if ((mkfifo (tmpReadPipeName, O_CREAT | O_EXCL) < 0) && (errno != EEXIST))
                         	{
-                            	printf ("cannot create fifo %s\n", tmpReadPipeName);
+                        		uiPrintfEx(trINFO, "cannot create fifo %s\n", tmpReadPipeName);
                         	}
                         	if ((mkfifo (tmpWritePipeName, O_CREAT | O_EXCL) < 0) && (errno != EEXIST))
                         	{
-                            	printf ("cannot create fifo %s\n", tmpWritePipeName);
+                        		uiPrintfEx(trINFO, "cannot create fifo %s\n", tmpWritePipeName);
                         	}
 
                         	memset (tmpReadPipeName, '\0', TMP_PIPE_NAME_SIZE);
@@ -920,7 +924,7 @@ void npi_rtt_ipc_main(void* args)
                         	tmpReadPipe = open (tmpReadPipeName, ZB_READ_PIPE_OPEN_FLAG, 0);
                         	if (tmpReadPipe == -1)
                         	{
-                            	printf ("open %s for read error\n", tmpReadPipeName);
+                        		uiPrintfEx(trINFO, "open %s for read error\n", tmpReadPipeName);
                             	ret = NPI_LNX_FAILURE;
                             	break;
                         	}
@@ -928,7 +932,7 @@ void npi_rtt_ipc_main(void* args)
                         	tmpWritePipe = open (tmpWritePipeName, O_WRONLY, 0);
                         	if (tmpWritePipe == -1)
                         	{
-                            	printf ("open %s for write error\n", tmpWritePipeName);
+                        		uiPrintfEx(trINFO, "open %s for write error\n", tmpWritePipeName);
                             	ret = NPI_LNX_FAILURE;
                             	break;
                        	 	}
@@ -956,7 +960,7 @@ void npi_rtt_ipc_main(void* args)
                     	}
                     	else
                     	{
-                        	printf("Other msg written to npi_lnx_ipc read pipe.\n");
+                    		uiPrintfEx(trINFO, "Other msg written to npi_lnx_ipc read pipe.\n");
                     	}
 					}
 				}
@@ -973,7 +977,7 @@ void npi_rtt_ipc_main(void* args)
 						switch (npi_ipc_errno)
 						{
                             case NPI_LNX_ERROR_IPC_RECV_DATA_DISCONNECT:
-                                printf("Removing connection #%d\n", c);
+                            	uiPrintfEx(trINFO, "Removing connection #%d\n", c);
                                 // Connection closed. Remove from set
                                 FD_CLR(c, &activePipesFDs);
                                 // We should now set ret to NPI_SUCCESS, but there is still one fatal error
@@ -985,7 +989,7 @@ void npi_rtt_ipc_main(void* args)
                                 // if the network is in BOOT mode, it will not answer any synchronous request other than SYS_BOOT request.
                                 // if we exit immediately, we will never be able to recover the NP device.
                                 // This may be replace in the future by an update of the RNP behavior
-                                printf("Synchronous Request Timeout...");
+                            	uiPrintfEx(trINFO, "Synchronous Request Timeout...");
                                 ret = NPI_LNX_SUCCESS;
                                 npi_ipc_errno = NPI_LNX_SUCCESS;
                                 break;
@@ -1006,7 +1010,7 @@ void npi_rtt_ipc_main(void* args)
                                 }
                                 else
                                 {
-                                    printf("[ERR] npi_ipc_errno 0x%.8X\n", npi_ipc_errno);
+                                	uiPrintfEx(trINFO, "[ERR] npi_ipc_errno 0x%.8X\n", npi_ipc_errno);
                                     // Everything about the error can be found in the message, and in npi_ipc_errno:
                                     childThread = ((npiMsgData_t *) npi_ipc_buf[0])->cmdId;
                                 }
@@ -1020,26 +1024,26 @@ void npi_rtt_ipc_main(void* args)
 							// Do it by reconnecting so that threads are kept synchronized
 							npiMsgData_t npi_ipc_buf_tmp;
 							int localRet = NPI_LNX_SUCCESS;
-							printf("Reset was requested, so try to disconnect device %d\n", devIdx);
+							uiPrintfEx(trINFO, "Reset was requested, so try to disconnect device %d\n", devIdx);
 							npi_ipc_buf_tmp.cmdId = NPI_LNX_CMD_ID_DISCONNECT_DEVICE;
 							localRet = npi_ServerCmdHandle((npiMsgData_t *)&npi_ipc_buf_tmp);
-							printf("Disconnection from device %d was %s\n", devIdx, (localRet == NPI_LNX_SUCCESS) ? "successful" : "unsuccessful");
+							uiPrintfEx(trINFO, "Disconnection from device %d was %s\n", devIdx, (localRet == NPI_LNX_SUCCESS) ? "successful" : "unsuccessful");
 							if (localRet == NPI_LNX_SUCCESS)
 							{
-								printf("Then try to connect device %d again\n", devIdx);
+								uiPrintfEx(trINFO, "Then try to connect device %d again\n", devIdx);
 								int bigDebugWas = __BIG_DEBUG_ACTIVE;
 								if (bigDebugWas == FALSE)
 								{
 									__BIG_DEBUG_ACTIVE = TRUE;
-									printf("__BIG_DEBUG_ACTIVE set to TRUE\n");
+									uiPrintfEx(trINFO, "__BIG_DEBUG_ACTIVE set to TRUE\n");
 								}
 								npi_ipc_buf_tmp.cmdId = NPI_LNX_CMD_ID_CONNECT_DEVICE;
 								localRet = npi_ServerCmdHandle((npiMsgData_t *)&npi_ipc_buf_tmp);
-								printf("Reconnection to device %d was %s\n", devIdx, (localRet == NPI_LNX_SUCCESS) ? "successful" : "unsuccessful");
+								uiPrintfEx(trINFO, "Reconnection to device %d was %s\n", devIdx, (localRet == NPI_LNX_SUCCESS) ? "successful" : "unsuccessful");
 								if (bigDebugWas == FALSE)
 								{
 									__BIG_DEBUG_ACTIVE = FALSE;
-									printf("__BIG_DEBUG_ACTIVE set to FALSE\n");
+									uiPrintfEx(trINFO, "__BIG_DEBUG_ACTIVE set to FALSE\n");
 								}
 							}
 						}
@@ -1047,7 +1051,7 @@ void npi_rtt_ipc_main(void* args)
 						// If this error was sent through socket; close this connection
 						if (((uint8) (((npiMsgData_t *) npi_ipc_buf[0])->subSys) & (uint8) RPC_CMD_TYPE_MASK) == RPC_CMD_NOTIFY_ERR)
 						{
-							printf("Removing connection #%d\n", c);
+							uiPrintfEx(trINFO, "Removing connection #%d\n", c);
 							// Connection closed. Remove from set
 							FD_CLR(c, &activePipesFDs);
                             ret = removeFromActiveList(c);
@@ -1057,7 +1061,7 @@ void npi_rtt_ipc_main(void* args)
 			}
 		}
 	}
-	printf("Exit socket while loop\n");
+	uiPrintfEx(trINFO, "Exit socket while loop\n");
 	/**********************************************************************
 	 * Remember to close down all connections
 	 *********************************************************************/
@@ -1164,7 +1168,7 @@ int removeFromActiveList(int pipe)
 			activePipes.size = 0;
 			activePipes.list[0][0] = 0;
             activePipes.list[0][1] = 0;
-			debug_printf("No  Active Connections");
+            uiPrintfEx(trINFO, "No  Active Connections");
 		}
 		else
 		{
@@ -1176,13 +1180,13 @@ int removeFromActiveList(int pipe)
 			// Decrement size
 			activePipes.size--;
 #ifdef __BIG_DEBUG__
-			printf("Remaining Active Connections: #%d", activePipes.list[0][0]);
+			uiPrintfEx(trINFO, "Remaining Active Connections: #%d", activePipes.list[0][0]);
 			// Send data to all connections, except listener
 			for (i = 1; i < activePipes.size; i++)
 			{
-				printf(", #%d", activePipes.list[i][0]);
+				rt_kprintf(", #%d", activePipes.list[i][0]);
 			}
-			printf("\n");
+			rt_kprintf("\n");
 #endif //__BIG_DEBUG__
 		}
 		return NPI_LNX_SUCCESS;
@@ -1218,7 +1222,7 @@ int NPI_LNX_IPC_ConnectionHandle(int readPipe)
     int writePipe;
 
 	// Handle the readPipe
-	debug_printf("Receive message...\n");
+    uiPrintfEx(trINFO, "Receive message...\n");
 
 	// Receive only NPI header first. Then then number of bytes indicated by length.
 	n = read(readPipe, npi_ipc_buf[0], RPC_FRAME_HDR_SZ);
@@ -1229,15 +1233,15 @@ int NPI_LNX_IPC_ConnectionHandle(int readPipe)
 			perror("recv");
 			if ( (errno == ENOTSOCK) || (errno == EPIPE))
 			{
-				debug_printf("[ERROR] Tried to read #%d as socket\n", readPipe);
-				debug_printf("Will disconnect #%d\n", readPipe);
+				uiPrintfEx(trINFO, "[ERROR] Tried to read #%d as socket\n", readPipe);
+				uiPrintfEx(trINFO, "Will disconnect #%d\n", readPipe);
 				npi_ipc_errno = NPI_LNX_ERROR_IPC_RECV_DATA_DISCONNECT;
 				ret = NPI_LNX_FAILURE;
 			}
 			else if (errno == ECONNRESET)
 			{
-				printf("[WARNING] Client disconnect while attempting to send to it\n");
-				debug_printf("Will disconnect #%d\n", readPipe);
+				uiPrintfEx(trINFO, "[WARNING] Client disconnect while attempting to send to it\n");
+				uiPrintfEx(trINFO, "Will disconnect #%d\n", readPipe);
 				npi_ipc_errno = NPI_LNX_ERROR_IPC_RECV_DATA_DISCONNECT;
 				ret = NPI_LNX_FAILURE;
 			}
@@ -1249,7 +1253,7 @@ int NPI_LNX_IPC_ConnectionHandle(int readPipe)
 		}
 		else
 		{
-			debug_printf("Will disconnect #%d\n", readPipe);
+			uiPrintfEx(trINFO, "Will disconnect #%d\n", readPipe);
 			npi_ipc_errno = NPI_LNX_ERROR_IPC_RECV_DATA_DISCONNECT;
 			ret = NPI_LNX_FAILURE;
 		}
@@ -1262,13 +1266,13 @@ int NPI_LNX_IPC_ConnectionHandle(int readPipe)
 			n = read(readPipe, (uint8*) &npi_ipc_buf[0][RPC_FRAME_HDR_SZ], ((npiMsgData_t *) npi_ipc_buf[0])->len);
 			if (n != ((npiMsgData_t *) npi_ipc_buf[0])->len)
 			{
-				printf("[ERR] Could not read out the NPI payload. Requested %d, but read %d!\n",
+				uiPrintfEx(trINFO, "[ERR] Could not read out the NPI payload. Requested %d, but read %d!\n",
 						((npiMsgData_t *) npi_ipc_buf[0])->len, n);
 				npi_ipc_errno = NPI_LNX_ERROR_IPC_RECV_DATA_TOO_FEW_BYTES;
 				ret = NPI_LNX_FAILURE;
 				if (n < 0)
 				{
-					perror("recv");
+					uiPrintfEx(trINFO, "recv");
 					// Disconnect this
 					npi_ipc_errno = NPI_LNX_ERROR_IPC_RECV_DATA_DISCONNECT;
 					ret = NPI_LNX_FAILURE;
@@ -1288,16 +1292,15 @@ int NPI_LNX_IPC_ConnectionHandle(int readPipe)
 
 		if (((uint8) (((npiMsgData_t *) npi_ipc_buf[0])->subSys) & (uint8) RPC_CMD_TYPE_MASK) == RPC_CMD_SREQ)
 		{
-			debug_printf("NPI SREQ:  (len %d)", n);
+			uiPrintfEx(trINFO, "NPI SREQ:  (len %d)", n);
 			for (i = 0; i < n; i++)
 			{
-				debug_printf(" 0x%.2X", (uint8)npi_ipc_buf[0][i]);
+				rt_kprintf(" 0x%.2X", (uint8)npi_ipc_buf[0][i]);
 			}
-			debug_printf("\n");
+			rt_kprintf("\n");
 
 			if (((uint8) (((npiMsgData_t *) npi_ipc_buf[0])->subSys) & (uint8) RPC_SUBSYSTEM_MASK) == RPC_SYS_SRV_CTRL)
 			{
-
 				//SREQ Command send to this server.
 				ret = npi_ServerCmdHandle((npiMsgData_t *)npi_ipc_buf[0]);
 			}
@@ -1348,16 +1351,16 @@ int NPI_LNX_IPC_ConnectionHandle(int readPipe)
 
 				if (n > 0)
 				{
-					debug_printf("NPI SRSP: (len %d)", n);
+					uiPrintfEx(trINFO, "NPI SRSP: (len %d)", n);
 					for (i = 0; i < n; i++)
 					{
-						debug_printf(" 0x%.2X", (uint8)npi_ipc_buf[1][i]);
+						rt_kprintf(" 0x%.2X", (uint8)npi_ipc_buf[1][i]);
 					}
-					debug_printf("\n");
+					rt_kprintf("\n");
 				}
 				else
 				{
-					printf("[ERR] SRSP is 0!\n");
+					uiPrintfEx(trINFO, "[ERR] SRSP is 0!\n");
 				}
 
 				//			pthread_mutex_lock(&npiSyncRespLock);
@@ -1368,17 +1371,17 @@ int NPI_LNX_IPC_ConnectionHandle(int readPipe)
 			else
 			{
 				// Keep status from NPI_SendSynchDataFnArr
-				debug_printf("[ERR] SRSP: npi_ipc_errno 0x%.8X\n", npi_ipc_errno);
+				uiPrintfEx(trINFO, "[ERR] SRSP: npi_ipc_errno 0x%.8X\n", npi_ipc_errno);
 			}
 		}
 		else if (((uint8) (((npiMsgData_t *) npi_ipc_buf[0])->subSys) & (uint8) RPC_CMD_TYPE_MASK) == RPC_CMD_AREQ)
 		{
-			debug_printf("NPI AREQ: (len %d)", n);
+			uiPrintfEx(trINFO, "NPI AREQ: (len %d)", n);
 			for (i = 0; i < n; i++)
 			{
-				debug_printf(" 0x%.2X", (uint8)npi_ipc_buf[0][i]);
+				rt_kprintf(" 0x%.2X", (uint8)npi_ipc_buf[0][i]);
 			}
-			debug_printf("\n");
+			rt_kprintf("\n");
 
 			if (((uint8) (((npiMsgData_t *) npi_ipc_buf[0])->subSys) & (uint8) RPC_SUBSYSTEM_MASK) == RPC_SYS_SRV_CTRL)
 			{
@@ -1399,13 +1402,13 @@ int NPI_LNX_IPC_ConnectionHandle(int readPipe)
 		}
 		else
 		{
-			printf("Can only accept AREQ or SREQ for now...\n");
-			printf("Unknown: (len %d)", n);
+			uiPrintfEx(trINFO, "Can only accept AREQ or SREQ for now...\n");
+			uiPrintfEx(trINFO, "Unknown: (len %d)\n", n);
 			for (i = 0; i < n; i++)
 			{
-				printf(" 0x%.2X", (uint8)npi_ipc_buf[0][i]);
+				rt_kprintf(" 0x%.2X", (uint8)npi_ipc_buf[0][i]);
 			}
-			printf("\n");
+			rt_kprintf("\n");
 
 			npi_ipc_errno = NPI_LNX_ERROR_IPC_RECV_DATA_INCOMPATIBLE_CMD_TYPE;
 			ret = NPI_LNX_FAILURE;
@@ -1414,11 +1417,11 @@ int NPI_LNX_IPC_ConnectionHandle(int readPipe)
 
 	if ((ret == NPI_LNX_FAILURE) && (npi_ipc_errno == NPI_LNX_ERROR_IPC_RECV_DATA_DISCONNECT))
 	{
-		debug_printf("Done with %d\n", readPipe);
+		uiPrintfEx(trINFO, "Done with %d\n", readPipe);
 	}
 	else
 	{
-		debug_printf("!Done\n");
+		uiPrintfEx(trINFO, "!Done\n");
 	}
 
 	return ret;
@@ -1449,20 +1452,20 @@ int NPI_LNX_IPC_SendData(uint8 len, int writePipe)
 	if (writePipe < 0)
 	{
 #ifdef __BIG_DEBUG__
-		printf("Dispatch AREQ to all active connections: #%d", activePipes.list[0][0]);
+		uiPrintfEx(trINFO, "Dispatch AREQ to all active connections: #%d", activePipes.list[0][0]);
 		// Send data to all connections, except listener
 		for (i = 1; i < activePipes.size; i++)
 		{
-			printf(", %d", activePipes.list[i][0]);
+			rt_kprintf(", %d", activePipes.list[i][0]);
 		}
-		printf(".\n");
+		rt_kprintf("\n");
 #endif //__BIG_DEBUG__
 		// Send data to all connections, except listener
 		for (i = 0; i < activePipes.size; i++)
 		{
             bytesSent = write(activePipes.list[i][1], npi_ipc_buf[1], len);
             
-            debug_printf("...sent %d bytes to Client #%d\n", bytesSent, activePipes.list[i][1]);
+            uiPrintfEx(trINFO, "...sent %d bytes to Client #%d\n", bytesSent, activePipes.list[i][1]);
             
             if (bytesSent < 0)
             {
@@ -1474,7 +1477,7 @@ int NPI_LNX_IPC_SendData(uint8 len, int writePipe)
                     // Remove from list if detected bad file descriptor
                     if (errno == EBADF)
                     {
-                        printf("Removing connection #%d\n", activePipes.list[i][1]);
+                    	uiPrintfEx(trINFO, "Removing connection #%d\n", activePipes.list[i][1]);
                         // Connection closed. Remove from set
                         FD_CLR(activePipes.list[i][0], &activePipesFDs);
                         ret = removeFromActiveList(activePipes.list[i][0]);
@@ -1488,7 +1491,7 @@ int NPI_LNX_IPC_SendData(uint8 len, int writePipe)
             }
             else if (bytesSent != len)
             {
-                printf("[ERROR] Failed to send all %d bytes on socket\n", len);
+            	uiPrintfEx(trINFO, "[ERROR] Failed to send all %d bytes on socket\n", len);
             }
 		}
 	}
@@ -1497,7 +1500,7 @@ int NPI_LNX_IPC_SendData(uint8 len, int writePipe)
 		// Send to specific connection only
 		bytesSent = write(writePipe, npi_ipc_buf[1], len);
 
-		debug_printf("...sent %d bytes to Client #%d\n", bytesSent, writePipe);
+		uiPrintfEx(trINFO, "...sent %d bytes to Client #%d\n", bytesSent, writePipe);
 
 		if (bytesSent < 0)
 		{
@@ -1505,7 +1508,7 @@ int NPI_LNX_IPC_SendData(uint8 len, int writePipe)
 			// Remove from list if detected bad file descriptor
 			if (errno == EBADF)
 			{
-				printf("Removing connection #%d\n", writePipe);
+				uiPrintfEx(trINFO, "Removing connection #%d\n", writePipe);
 				// Connection closed. Remove from set
 				FD_CLR(writePipe, &activePipesFDs);
 				ret = removeFromActiveList(writePipe);
@@ -1562,10 +1565,10 @@ int SerialConfigParser(RTT_FILE* serialCfgFd, const char* section,
 		return NPI_LNX_FAILURE;
 	}
 	resStringToFree = resString;
-	debug_printf("------------------------------------------------------\n");
-	debug_printf("Serial Config Parsing:\n");
-	debug_printf("- \tSection: \t%s\n", section);
-	debug_printf("- \tKey: \t\t%s\n", key);
+	uiPrintfEx(trINFO, "------------------------------------------------------\n");
+	uiPrintfEx(trINFO, "Serial Config Parsing:\n");
+	uiPrintfEx(trINFO, "- \tSection: \t%s\n", section);
+	uiPrintfEx(trINFO, "- \tKey: \t\t%s\n", key);
 
 	// Do nothing if the file doesn't exist
 	if (serialCfgFd != NULL)
@@ -1582,7 +1585,7 @@ int SerialConfigParser(RTT_FILE* serialCfgFd, const char* section,
 			if (strlen(resString) == 128)
 			{
 				invalidLineLen = TRUE;
-				debug_printf("Found line > 128 bytes\r");
+				//uiPrintfEx(trINFO, "Found line > 128 bytes\n");
 				rtt_fflush(rtt_stdout);
 			}
 			else
@@ -1597,11 +1600,11 @@ int SerialConfigParser(RTT_FILE* serialCfgFd, const char* section,
 					// Remove the newline character (ok even if line had length 128)
 					resString[strlen(resString) - 1] = '\0';
 
-					debug_printf("Found line < 128 bytes\r");
+					//uiPrintfEx(trINFO, "Found line < 128 bytes\n");
 					rtt_fflush(rtt_stdout);
 					if (resString[0] == '[')
 					{
-						debug_printf("Found section %s\n", resString);
+						uiPrintfEx(trINFO, "Found section %s\n", resString);
 						// Search for wanted section
 						psStr = strstr(resString, section);
 						if (psStr != NULL)
@@ -1609,7 +1612,7 @@ int SerialConfigParser(RTT_FILE* serialCfgFd, const char* section,
 							resString = psStr;
 							// We found our wanted section. Now search for wanted key.
 							sectionFound = TRUE;
-							debug_printf("Found wanted section!\n");
+							uiPrintfEx(trINFO, "Found wanted section!\n");
 						}
 						else
 						{
@@ -1619,7 +1622,7 @@ int SerialConfigParser(RTT_FILE* serialCfgFd, const char* section,
 					}
 					else if (sectionFound == TRUE)
 					{
-						debug_printf("Line to process %s (strlen=%d)\n",
+						uiPrintfEx(trINFO, "Line to process %s (strlen=%d)\n",
 								resString,
 								strlen(resString));
 						// We have found our section, now we search for wanted key
@@ -1631,7 +1634,7 @@ int SerialConfigParser(RTT_FILE* serialCfgFd, const char* section,
 							psStr = strstr(resString, key);
 							if (psStr != NULL)
 							{
-								debug_printf("Found key \t'%s' in \t'%s'\n", key, resString);
+								uiPrintfEx(trINFO, "Found key \t'%s' in \t'%s'\n", key, resString);
 								// We found our key. The value is located after the '='
 								// after the key.
 								//                                                                                                                            printf("%s\n", psStr);
@@ -1642,9 +1645,9 @@ int SerialConfigParser(RTT_FILE* serialCfgFd, const char* section,
 
 								resString = psStr;
 								res = NPI_LNX_SUCCESS;
-								debug_printf("Found value '%s'\n", resString);
+								uiPrintfEx(trINFO, "Found value '%s'\n", resString);
 								strcpy(resultString, resString);
-								debug_printf("Found value2 '%s'\n", resultString);
+								uiPrintfEx(trINFO, "Found value2 '%s'\n", resultString);
 								// We can return this string to the calling function
 								break;
 							}
@@ -1653,7 +1656,7 @@ int SerialConfigParser(RTT_FILE* serialCfgFd, const char* section,
 				}
 				else
 				{
-					debug_printf("Found end of line > 128 bytes\n");
+					uiPrintfEx(trINFO, "Found end of line > 128 bytes\n");
 					invalidLineLen = FALSE;
 				}
 			}
@@ -1696,15 +1699,15 @@ int NPI_AsynchMsgCback(npiMsgData_t *pMsg)
 	int i;
 	//	int ret = NPI_LNX_SUCCESS;
 
-	debug_printf("[-->] %d bytes, subSys 0x%.2X, cmdId 0x%.2X, pData:",
+	uiPrintfEx(trINFO, "[-->] %d bytes, subSys 0x%.2X, cmdId 0x%.2X, pData:",
 			pMsg->len,
 			pMsg->subSys,
 			pMsg->cmdId);
 	for (i = 0; i < pMsg->len; i++)
 	{
-		debug_printf(" 0x%.2X", pMsg->pData[i]);
+		rt_kprintf(" 0x%.2X", pMsg->pData[i]);
 	}
-	debug_printf("\n");
+	rt_kprintf("\n");
 
 	memcpy(npi_ipc_buf[1], (uint8*) pMsg, pMsg->len + RPC_FRAME_HDR_SZ);
 
@@ -1731,7 +1734,7 @@ int NPI_AsynchMsgCback(npiMsgData_t *pMsg)
  */
 void NPI_LNX_IPC_Exit(int ret)
 {
-	printf("... freeing memory (ret %d)\n", ret);
+	uiPrintfEx(trINFO, "... freeing memory (ret %d)\n", ret);
 
 	// Close file for parsing
 	if (serialCfgFd != NULL)
@@ -1779,7 +1782,7 @@ void NPI_LNX_IPC_Exit(int ret)
 	if (ret == NPI_LNX_FAILURE)
 	{
 		// Don't even bother open a socket; device opening failed..
-		printf("Could not open device... exiting\n");
+		uiPrintfEx(trINFO, "Could not open device... exiting\n");
 
 		exit(npi_ipc_errno);
 	}
@@ -1818,10 +1821,10 @@ int NPI_LNX_IPC_NotifyError(uint16 source, const char* errorMsg)
         //
     }
 
-	debug_printf("[NOTIFY_ERROR] Trying to connect...\n");
+	uiPrintfEx(trINFO, "[NOTIFY_ERROR] Trying to connect...\n");
 
 	if (ret == NPI_LNX_SUCCESS)
-		debug_printf("[NOTIFY_ERROR] Connected.\n");
+		uiPrintfEx(trINFO, "[NOTIFY_ERROR] Connected.\n");
 
 	if (strlen(errorMsg) <= AP_MAX_BUF_LEN)
 	{
@@ -1831,7 +1834,7 @@ int NPI_LNX_IPC_NotifyError(uint16 source, const char* errorMsg)
 	{
 		errorMsg = "Default msg. Requested msg too long.\n";
 		memcpy(msg.pData, errorMsg, strlen(errorMsg));
-		debug_printf("[NOTIFY_ERROR] Size of error message too long (%d, max %d).\n",
+		uiPrintfEx(trINFO, "[NOTIFY_ERROR] Size of error message too long (%d, max %d).\n",
 				strlen(errorMsg),
 				AP_MAX_BUF_LEN);
 	}
@@ -1867,7 +1870,7 @@ static int npi_ServerCmdHandle(npiMsgData_t *pNpi_ipc_buf)
 	{
 		case NPI_LNX_CMD_ID_CTRL_TIME_PRINT_REQ:
         {
-            printf("NPI_Server not compiled to support time stamps\n");
+        	uiPrintfEx(trINFO, "NPI_Server not compiled to support time stamps\n");
             // Set return status
             pNpi_ipc_buf->len = 1;
             pNpi_ipc_buf->pData[0] = (uint8) NPI_LNX_FAILURE;
@@ -1880,11 +1883,11 @@ static int npi_ServerCmdHandle(npiMsgData_t *pNpi_ipc_buf)
 			__BIG_DEBUG_ACTIVE = pNpi_ipc_buf->pData[0];
 			if (__BIG_DEBUG_ACTIVE == FALSE)
 			{
-				printf("__BIG_DEBUG_ACTIVE set to FALSE\n");
+				uiPrintfEx(trINFO, "__BIG_DEBUG_ACTIVE set to FALSE\n");
 			}
 			else
 			{
-				printf("__BIG_DEBUG_ACTIVE set to TRUE\n");
+				uiPrintfEx(trINFO, "__BIG_DEBUG_ACTIVE set to TRUE\n");
 			}
 			// Set return status
 			pNpi_ipc_buf->len = 1;
@@ -1952,7 +1955,7 @@ static int npi_ServerCmdHandle(npiMsgData_t *pNpi_ipc_buf)
 			else
 			{
 				ret = HalGpioResetSet(FALSE);
-				debug_printf("Resetting device\n");
+				uiPrintfEx(trINFO, "Resetting device\n");
 				usleep(1);
 				ret = HalGpioResetSet(TRUE);
 			}
@@ -1960,16 +1963,16 @@ static int npi_ServerCmdHandle(npiMsgData_t *pNpi_ipc_buf)
 		break;
 		case NPI_LNX_CMD_ID_DISCONNECT_DEVICE:
 		{
-			debug_printf("Trying to disconnect device %d\n", devIdx);
+			uiPrintfEx(trINFO, "Trying to disconnect device %d\n", devIdx);
 			(NPI_CloseDeviceFnArr[devIdx])();
-			debug_printf("Preparing return message after disconnecting device %d\n", devIdx);
+			uiPrintfEx(trINFO, "Preparing return message after disconnecting device %d\n", devIdx);
 			pNpi_ipc_buf->len = 1;
 			pNpi_ipc_buf->pData[0] = NPI_LNX_SUCCESS;
 		}
 		break;
 		case NPI_LNX_CMD_ID_CONNECT_DEVICE:
 		{
-			debug_printf("Trying to connect to device %d, %s\n", devIdx, devPath);
+			uiPrintfEx(trINFO, "Trying to connect to device %d, %s\n", devIdx, devPath);
 			switch(devIdx)
 			{
                 case NPI_UART_FN_ARR_IDX:
@@ -2135,7 +2138,7 @@ static int npi_ServerCmdHandle(npiMsgData_t *pNpi_ipc_buf)
                     ret = NPI_LNX_FAILURE;
                     break;
 			}
-			debug_printf("Preparing return message after connecting to device %d (ret == 0x%.2X, npi_ipc_errno == 0x%.2X)\n",
+			uiPrintfEx(trINFO, "Preparing return message after connecting to device %d (ret == 0x%.2X, npi_ipc_errno == 0x%.2X)\n",
 					devIdx, ret, npi_ipc_errno);
 			pNpi_ipc_buf->len = 1;
 			pNpi_ipc_buf->pData[0] = ret;

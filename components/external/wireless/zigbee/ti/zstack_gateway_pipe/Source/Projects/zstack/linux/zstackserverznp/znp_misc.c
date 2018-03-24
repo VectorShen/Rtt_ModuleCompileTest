@@ -50,14 +50,16 @@
 
 #include "api_client.h"
 #include "zstackpb.h"
+
+#undef SERVER_NAME
+#define SERVER_NAME ZSTACKZNP_SRVR
 #include "trace.h"
 
 #include "f8wConfig.h"
 /*********************************************************************
  * Constants
  */
-#undef uiPrintf
-#define uiPrintf	rt_kprintf
+
 /*********************************************************************
  * Typedefs
  */

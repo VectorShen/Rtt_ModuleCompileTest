@@ -40,7 +40,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
-//#include <execinfo.h>
 #include <time.h>
 
 #include "hal_types.h"
@@ -48,6 +47,10 @@
 #include "hal_rpc.h"
 #include "api_server.h"
 #include "configparser.h"
+
+#undef SERVER_NAME
+#define SERVER_NAME ZSTACKZNP_SRVR
+
 #include "trace.h"
 
 /**************************************************************************************************

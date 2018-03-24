@@ -50,11 +50,13 @@
 #include <fcntl.h>
 
 #include <pthread.h>
-//#include <bits/local_lim.h>
 #include <errno.h>
 
 #include "hal_rpc.h"
 #include "api_server.h"
+
+#undef SERVER_NAME
+#define SERVER_NAME ZSTACKZNP_SRVR
 #include "trace.h"
 #include <dfs_select.h>
 /*********************************************************************
@@ -66,9 +68,6 @@
 
 #define NPI_LNX_ERROR_MODULE(a)		 ((uint8)((a & 0xFF00) >> 8))
 #define NPI_LNX_ERROR_THREAD(a)		 ((uint8)(a & 0x00FF))
-
-#undef uiPrintf
-#define uiPrintf	rt_kprintf
 
 /*********************************************************************
  * CONSTANTS
@@ -224,7 +223,7 @@ bool APIS_Init( emServerId serverId, bool verbose, pfnAPISMsgCB pfCB )
 
 	if ( verbose )
 	{
-		uiPrintf( "waiting for connect pipe on #%d...\n", listenPipeReadHndl );
+		uiPrintfEx(trINFO,  "waiting for connect pipe on #%d...\n", listenPipeReadHndl );
 	}
 
 	// iCreate thread for listening
@@ -232,7 +231,7 @@ bool APIS_Init( emServerId serverId, bool verbose, pfnAPISMsgCB pfCB )
 			NULL ) )
 	{
 		// thread creation failed
-		uiPrintf( "Failed to create an API Server Listening thread\n" );
+		uiPrintfEx(trINFO,  "Failed to create an API Server Listening thread\n" );
 		return (FALSE);
 	}
 
@@ -254,7 +253,7 @@ void APIS_SendData( int writePipe, uint8 sysID, bool areq, uint8 cmdId,
 
 	if ( len > (uint16)( len + sizeof(apic16BitLenMsgHdr_t) ) )
 	{
-		uiPrintf( "[ERR] APIS_SendData() called with length exceeding max allowed" );
+		uiPrintfEx(trINFO,  "[ERR] APIS_SendData() called with length exceeding max allowed" );
 		return;
 	}
 	msglen += sizeof(apic16BitLenMsgHdr_t);
@@ -263,7 +262,7 @@ void APIS_SendData( int writePipe, uint8 sysID, bool areq, uint8 cmdId,
 	if ( !pMsg )
 	{
 		// TODO: abort
-		uiPrintf( "[ERR] APIS_SendData() failed to allocate memory block" );
+		uiPrintfEx(trINFO,  "[ERR] APIS_SendData() failed to allocate memory block" );
 		return;
 	}
 
@@ -521,7 +520,7 @@ static int apisSendData( uint16 len, uint8 *pData, int writePipe )
 					// Remove from list if detected bad file descriptor
 					if ( errno == EBADF )
 					{
-						uiPrintf( "Removing pipe #%d\n", entry->serverWritePipe );
+						uiPrintfEx(trINFO,  "Removing pipe #%d\n", entry->serverWritePipe );
 						entry->garbage = TRUE;
 					}
 					else
@@ -563,7 +562,7 @@ static int apisSendData( uint16 len, uint8 *pData, int writePipe )
 					// Remove from list if detected bad file descriptor
 					if ( errno == EBADF )
 					{
-						uiPrintf( "Removing pipe #%d\n", writePipe );
+						uiPrintfEx(trINFO,  "Removing pipe #%d\n", writePipe );
 						dropActivePipe( writePipe );
 						// Pipe closed. Remove from set
 						apisErrorCode =
@@ -629,7 +628,7 @@ static int createReadWritePipes( emServerId serverId )
 	}
 	memset(listenReadPipePathBuffer, '\0', APIC_READWRITE_PIPE_NAME_LEN);
 	sprintf(listenReadPipePathBuffer, "%s%s", FIFO_PATH_PREFIX, listenReadPipePathName);
-	//闂傚倸鐗忛崑銈呂熼崱妯肩畽闁绘劖娼欓埅鐢碉拷娈垮櫙閹风兘鎮归崶顏勫惞妞ゆ挻鎮傞弻鍡涘箼閸曨厾顦梺鍛婂姈閻熝囶敇閹间焦鐒奸柟鎹愬煐閻ｉ亶鏌熼崹顐ｅ碍缂佽鲸鍨归幉鐗堟媴閾忚鎯ｉ柣鐘叉穿瀹曠敻顢橀幖浣圭劶闁圭偓娼欐径宥夋煛閿熺晫鎹勯崫鍕帓闂佽桨鑳舵晶妤�鐣垫笟锟藉畷妯侯吋閸℃ɑ鍎ユ繛杈剧秶閹凤拷
+	//闂傚倸鍊搁悧蹇涘磻閵堝憘鐔煎幢濡偐鐣介梺缁樺姈濞兼瑩鍩呴悽纰夋嫹濞堝灝娅欓柟椋庡厴閹綊宕堕鍕優濡炪倖鎸婚幃鍌炲蓟閸℃稑绠奸柛鏇ㄥ幘椤︻噣姊洪崨濠傚闁荤啙鍥舵晣闁归棿鐒﹂悞濂告煙閹规劕鐓愰柣锝変憾閺岀喖宕归锝呯缂備浇椴搁崹褰掑箟閻楀牊濯撮柧蹇氼潐閹綁鏌ｉ悩鍙夌┛鐎规洜鏁婚、姗�骞栨担鍦姸闂佸湱鍋撳娆愬緞瀹ュ鐓涢柨鐔烘櫕閹瑰嫰宕崟顓炲笓闂備浇妗ㄩ懗鑸垫櫠濡わ拷閻ｅ灚绗熼敓钘夌暦濡警鍚嬮柛鈩兩戦崕銉︾箾鏉堝墽绉堕柟鍑ゆ嫹
 	listenPipeReadHndl = open (listenReadPipePathBuffer, ZB_LISTEN_PIPE_OPEN_FLAG, 0);
 	if (listenPipeReadHndl == -1)
 	{
@@ -730,7 +729,7 @@ void *apislisteningThreadFunc( void *ptr )
 			{
                 if( c == listenPipeReadHndl )
                 {
-					//闂佽浜介崕鏌ュ极閸︻叏鎷烽獮鍨仾闁糕晜绋撶划鈺咁敍濠婂骸鎮侀梻渚囧墯閹告儳鈻撻幋锕�鏋侀柣妤�鐗嗙粊锟�
+					//闂備浇顫夋禍浠嬪磿閺屻儱鏋侀柛锔诲弿閹风兘鐛崹顔句痪闂佺硶鏅滅粙鎾跺垝閳哄拋鏁嶆繝濠傞閹線姊绘笟鍥у闁瑰憡鍎抽埢鎾诲箣閿曪拷閺嬩線鏌ｅΔ锟介悧鍡欑矈閿燂拷
 					memset(listen_buf,'\0',SERVER_LISTEN_BUF_SIZE);
 					n = read( listenPipeReadHndl, listen_buf, SERVER_LISTEN_BUF_SIZE );
 					if ( n <= 0 )
@@ -802,9 +801,9 @@ void *apislisteningThreadFunc( void *ptr )
                         }
 						if( ret == APIS_LNX_SUCCESS )
 						{
-							//闂佸搫瀚烽崹閬嶎敆濠婂懏鍏滄い鏃傚亾閻ｉ亶鎮楅獮鍨仾闁糕晜绋撶划鈺咁敍濠婂骸鎮侀梻渚囧墯閹逛胶鎹㈠☉銏犵闁靛闄勫▓鍫曟煙閻у憡瀚�
-							//闂佺懓鐏氶幐鍝ユ閹达箑绀冩繛鍡樺焾閸氾拷闂備緡鍓氶幖顐ゆ濠靛绀冩繛鍡楃箰瀵娊鏌℃担鍝勵暭鐎规挷绶氶弫宥囦沪閸婄喎鐝梺鐟扮仛閹稿摜妲愰幋锔藉剮缂佸娉曠�瑰绱撻崒娑氬ⅹ鐟滄媽娉曠划濠氭晸閻樺崬顥氶梺姹囧妼鐎氼垶顢氭导鏉戠婵炲棙鍔曟导搴ㄥ级閳哄倸顥嬫い鎴滅窔閺佸秶浠﹂挊澶樻奖闂佺娴氬▍鏉� select闂佹眹鍔岀�氼厾鏁崼鏇炵闁割偅娲栧▍锟�
-                            //闂傚倸鍟抽褔銆侀敐澶婄闁规儳纾壕濠氭煥濞戞鐒告俊鑼额嚙椤垽锝為鐘垫喒闂佸憡鑹鹃惌浣烘崲濡偐鐭欓悗锝庡幘缁犮儵鎮跺☉妯垮闁圭儵鏅犻獮鍫ュ閵堝棴绱俊顐㈠簻閹凤拷
+							//闂備礁鎼�氱兘宕归柆宥庢晢婵犲﹤鎳忛崗婊勩亜閺冨倸浜鹃柣锝変憾閹鐛崹顔句痪闂佺硶鏅滅粙鎾跺垝閳哄拋鏁嶆繝濠傞閹線姊绘笟鍥у闁归�涜兌閹广垹鈽夐姀鐘殿唺闂侀潧顧�闂勫嫬鈻撻崼鏇熺厵闁谎冩啞鐎氾拷
+							//闂備胶鎳撻悘姘跺箰閸濄儲顫曢柟杈剧畱缁�鍐╃箾閸℃ê鐒鹃柛姘炬嫹闂傚倷绶￠崜姘跺箹椤愩倖顫曟繝闈涱儏缁�鍐╃箾閸℃绠扮�殿喗濞婇弻鈩冩媴閸濆嫷鏆悗瑙勬尫缁舵岸寮鍥︽勃闁稿﹦鍠庨悵顖炴⒑閻熸壆浠涢柟绋挎憸濡叉劙骞嬮敂钘夊壆缂備礁顑堝▔鏇狅拷鐟邦槺缁辨捇宕掑☉姘吂閻熸粍濯藉▔鏇犲垝婵犳碍鏅搁柣妯哄船椤ユ岸姊哄Ч鍥у閻庢凹鍨堕、姘閺夋垹顦ㄥ┑鐐叉閸旀洘瀵兼惔銊ョ骇闁冲搫鍊搁ˉ瀣亜閹存粎绐旈柡浣哥Ф娴狅箓鎸婃径妯诲闂備胶顭堝ù姘枍閺夛拷 select闂備焦鐪归崝宀�锟芥凹鍘鹃弫顕�宕奸弴鐐殿槴闂佸壊鍋呭ú鏍р枍閿燂拷
+                            //闂傚倸鍊搁崯鎶筋敋瑜旈妴渚�鏁愭径濠勵吋闂佽鍎崇壕顓犲婵犳碍鐓ユ繛鎴烆焽閻掑憡淇婇懠棰濆殭妞ゎ偁鍨介敐鐐侯敇閻樺灚鍠掗梻浣告啞閼归箖鎯屾担鐑樺床婵☆垵鍋愰惌娆撴倵閿濆骸骞樼紒鐘劦閹泛鈽夊Ο鍨伃闂佸湱鍎甸弲鐘荤嵁閸儱顫呴柕鍫濇４缁鳖亝淇婇銏犵盎闁瑰嚖鎷�
 							printf("writePipePathName is %s.\n", writePipePathName);
 							listenPipeWriteHndl=open(writePipePathName, O_WRONLY, 0);
 							if(listenPipeWriteHndl==-1)
@@ -818,7 +817,7 @@ void *apislisteningThreadFunc( void *ptr )
 							}
                             sprintf(assignedId,"%d",api_server_clientsNum);
 
-							//闂佸搫娲ら悺銊╁蓟婵犲嫮涓嶉柨鐔哄С婢规洟鏌￠崒姘煑婵炲棎鍨藉畷銉╂晸閿燂拷
+							//闂備礁鎼ú銈夋偤閵娾晛钃熷┑鐘插娑撳秹鏌ㄩ悢鍝勑″瑙勬礋閺岋繝宕掑顓犵厬濠电偛妫庨崹钘夌暦閵夆晜鏅搁柨鐕傛嫹
 							memset(tmpReadPipeName, '\0', TMP_PIPE_NAME_SIZE);
 							memset(tmpWritePipeName, '\0', TMP_PIPE_NAME_SIZE);
 							sprintf(tmpReadPipeName, "%s%d", readPipePathName, api_server_clientsNum);
@@ -826,7 +825,7 @@ void *apislisteningThreadFunc( void *ptr )
 
                             api_server_clientsNum++;
                             
-							//闂傚倸鐗忛崑銈呂熼崱妯肩畽闁绘劖褰冮悘锛勶拷鐐瑰�涘▍锝夘敇閹间焦鐒奸柨鐕傛嫹
+							//闂傚倸鍊搁悧蹇涘磻閵堝憘鐔煎幢濡偐鐣介梺缁樺姈瑜板啴鎮橀敍鍕舵嫹閻愮懓锟芥稑鈻嶉敐澶樻晣闁归棿鐒﹂悞濂告煥閻曞倹瀚�
 							if((mkfifo(tmpReadPipeName,O_CREAT|O_EXCL)<0)&&(errno!=EEXIST))
 							{
 								printf("cannot create fifo %s\n", tmpReadPipeName);
@@ -835,7 +834,7 @@ void *apislisteningThreadFunc( void *ptr )
 							{
 								printf("cannot create fifo %s\n", tmpWritePipeName);
 							}	
-							//闂傚倸鐗忛崑銈呂熼崱妯肩畽闁绘劖娼欓埅鐢碉拷娈垮櫙閹风兘鎮归崶顏勫惞妞ゆ挻鎮傞弻鍡涙晸閿燂拷
+							//闂傚倸鍊搁悧蹇涘磻閵堝憘鐔煎幢濡偐鐣介梺缁樺姈濞兼瑩鍩呴悽纰夋嫹濞堝灝娅欓柟椋庡厴閹綊宕堕鍕優濡炪倖鎸婚幃鍌炲蓟閸℃稒鏅搁柨鐕傛嫹
 							tmpReadPipe = open(tmpReadPipeName, O_RDONLY|O_NONBLOCK, 0);
 							if(tmpReadPipe == -1)
 							{
@@ -844,10 +843,10 @@ void *apislisteningThreadFunc( void *ptr )
 								break;
 							}
 							
-                            //闂佸憡鍔栭悷銉╁矗閸℃稒鍎庨柟瀛樼箖閸庢梻绱掗悪鍛瘈濞存粣鎷�
+                            //闂備礁鎲￠崝鏍偡閵夆晛鐭楅柛鈩冪♁閸庡酣鏌熺�涙绠栭柛搴㈡⒒缁辨帡鎮崨顖滅槇婵炲瓨绮ｉ幏锟�
 							write(listenPipeWriteHndl, assignedId, strlen(assignedId));
 
-							//闂傚倸鍟抽褔銆侀敐澶婄闁规儳纾壕濠氭煕閹邦厾鎳呮い鎾存倐閺屽棝鏁撻敓锟�
+							//闂傚倸鍊搁崯鎶筋敋瑜旈妴渚�鏁愭径濠勵吋闂佽鍎崇壕顓犲婵犳碍鐓曢柟閭﹀幘閹冲懏銇勯幘瀛樺�愰柡灞芥閺佹捇鏁撻敓锟�
 							tmpWritePipe = open(tmpWritePipeName, O_WRONLY, 0);
 							if(tmpWritePipe == -1)
 							{
@@ -855,7 +854,7 @@ void *apislisteningThreadFunc( void *ptr )
 								ret = APIS_LNX_FAILURE;
 								break;
 							}
-							//闁荤姴娲╅褔宕幘鍓佷笉闁跨喓濮虫竟鏇㈡煙鐠囪尙绠洪柛顐簽缁參鏁冮敓鑺ユ叏閻愬搫绀傞柕澶堝劚閻撲繘ctivelist婵炴垶鎼幏锟�
+							//闂佽崵濮村ú鈺咁敋瑜斿畷顖炲箻閸撲椒绗夐梺璺ㄥ枔婵櫕绔熼弴銏＄厵閻犲洩灏欑粻娲煕椤愵偂绨界紒顕呭弮閺佸啴鏁撻懞銉﹀弿闁绘劕鎼粈鍌炴煏婢跺牆鍔氶柣鎾茬箻ctivelist濠电偞鍨堕幖顐﹀箯閿燂拷
 							ret = addToActiveList(tmpReadPipe, tmpWritePipe);
 							if ( ret != APIS_LNX_SUCCESS )
 							{
@@ -874,7 +873,7 @@ void *apislisteningThreadFunc( void *ptr )
 
 								apisMsgCB( searchWritePipeFromReadPipe(tmpReadPipe), 0, 0, 0, NULL, SERVER_CONNECT );
 							}
-							//闂佺绻戞繛濠偽涢幘顔藉剮闁瑰瓨绻冮崕鏃堟煛閸愩劌顣虫繛鍫熷灴瀹曟ê鈻庨幋顓炴倎闂備緡鍓ㄩ幏锟�
+							//闂備胶顭堢换鎴炵箾婵犲伣娑㈠箻椤旇棄鍓梺鐟扮摠缁诲啴宕曢弮鍫熺厸闁告劑鍔岄。铏箾閸喎鐏寸�规洘锚閳诲酣骞嬮鐐村�庨梻鍌欑贰閸撱劑骞忛敓锟�
 							close(listenPipeWriteHndl);
 						}
                         else
@@ -897,7 +896,7 @@ void *apislisteningThreadFunc( void *ptr )
                         switch ( apisErrorCode )
                         {
                             case APIS_ERROR_IPC_RECV_DATA_DISCONNECT:
-                                uiPrintf( "Removing pipe #%d\n", c );
+                                uiPrintfEx(trINFO,  "Removing pipe #%d\n", c );
 
                                 // Pipe closed. Remove from set
                                 FD_CLR( c, &activePipesFDs );
@@ -919,7 +918,7 @@ void *apislisteningThreadFunc( void *ptr )
                                 else
                                 {
                                     //							debug_
-                                    uiPrintf( "[ERR] apisErrorCode 0x%.8X\n", apisErrorCode );
+                                    uiPrintfEx(trINFO,  "[ERR] apisErrorCode 0x%.8X\n", apisErrorCode );
 
                                     // Everything about the error can be found in the message, and in npi_ipc_errno:
                                     childThread = apisHdrBuf.cmdId;
@@ -1031,7 +1030,7 @@ static void writetoAPISLnxLog( const char* str )
 		}
 		else
 		{
-			uiPrintf( "Could not write \n%s\n to %s. Error: %.8X\n", str, logPath,
+			uiPrintfEx(trINFO,  "Could not write \n%s\n to %s. Error: %.8X\n", str, logPath,
 					errno );
 			perror( "open" );
 		}
@@ -1119,10 +1118,10 @@ static int apisPipeHandle( int readPipe )
 	int n;
 	int ret = APIS_LNX_SUCCESS;
 
-// Handle the pipe
+	// Handle the pipe
 	uiPrintfEx(trINFO, "Receive message...\n" );
 
-// Receive only NPI header first. Then then number of bytes indicated by length.
+	// Receive only NPI header first. Then then number of bytes indicated by length.
 	n = read( readPipe, &apisHdrBuf, sizeof(apisHdrBuf) );
 	if ( n <= 0 )
 	{
@@ -1152,7 +1151,7 @@ static int apisPipeHandle( int readPipe )
 
 			if ( !buf )
 			{
-				uiPrintf( "[ERR] APIS receive thread memory allocation failure" );
+				uiPrintfEx(trINFO,  "[ERR] APIS receive thread memory allocation failure" );
 				apisErrorCode = APIS_ERROR_MALLOC_FAILURE;
 				return APIS_LNX_FAILURE;
 			}
@@ -1160,7 +1159,7 @@ static int apisPipeHandle( int readPipe )
 			n = read( readPipe, buf, len );
 			if ( n != len )
 			{
-				uiPrintf( "[ERR] Could not read out the NPI payload."
+				uiPrintfEx(trINFO,  "[ERR] Could not read out the NPI payload."
 						" Requested %d, but read %d!\n", len, n );
 
 				apisErrorCode = APIS_ERROR_IPC_RECV_DATA_TOO_FEW_BYTES;
@@ -1197,7 +1196,7 @@ static int apisPipeHandle( int readPipe )
 			{
 				// len == 0xFFFF is used for pipe removal
 				// hence is not supported.
-				uiPrintf( "[WARN] APIS received message"
+				uiPrintfEx(trINFO,  "[WARN] APIS received message"
 						" with size 0xFFFFu was discarded silently\n" );
 			}
 		}

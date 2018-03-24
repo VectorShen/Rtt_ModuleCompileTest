@@ -29,7 +29,7 @@ Source/Projects/tools/LinuxHost/ipclib/server/npi_lnx_ipc.c
 """)
 
 npi_path = [GetCurrentDir() + '/Source/Projects/tools/LinuxHost/ipclib/server',
-    GetCurrentDir() + '/Source/Projects/tools/LinuxHost/ipclib/common']
+    GetCurrentDir() + '/Source/Projects/tools/LinuxHost/ipclib']
 npi_define = ['MRDY_EARLY_FIX', 'RNP_HOST', 'SRDY_INTERRUPT']
 
 zlsznp_src = Split("""
@@ -60,7 +60,7 @@ zlsznp_path = [GetCurrentDir() + '/Source/Projects/zstack/linux/linux_osal/inclu
     GetCurrentDir() + '/Source/Projects/zstack/linux/srvwrapper',
     GetCurrentDir() + '/Source/Projects/zstack/linux/zstackpb',
     GetCurrentDir() + '/Source/Projects/zstack/linux/zmac']
-zlsznp_define = ['LINUX_ZNP', 'ZDO_COORDINATOR', '__ZNP_DEBUG__', 'API_CLIENT_8BIT_LEN', 'SERVER_NAME=ZSTACKZNP_SRVR']
+zlsznp_define = ['LINUX_ZNP', 'ZDO_COORDINATOR', '__ZNP_DEBUG__', 'API_CLIENT_8BIT_LEN']
 
 nwkmgr_src = Split("""
 Source/Projects/zstack/linux/nwkmgr/nwkmgr.pb-c.c

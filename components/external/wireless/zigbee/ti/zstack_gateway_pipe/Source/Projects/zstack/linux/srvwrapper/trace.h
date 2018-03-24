@@ -13,8 +13,13 @@ extern bool trace_engine_initialized;
 
 extern uint32_t default_trace_enable_mask;
 
+#ifndef TRUE
 #define TRUE 		true
+#endif
+
+#ifndef FALSE
 #define FALSE		false
+#endif
 
 #define trUNMASKABLE 0
 #define trFATAL      1
@@ -41,7 +46,7 @@ extern uint32_t default_trace_enable_mask;
 #define _to_string(a) # a
 
 #ifndef SERVER_NAME
-#define SERVER_NAME UNNAMED_PROCESS
+#define SERVER_NAME UNNAME_PROCESS
 #endif
 
 #if 0
@@ -75,6 +80,8 @@ extern uint32_t default_trace_enable_mask;
 #endif
 
 #define uiPrintf(fmt, ...) uiPrintfEx(trMISC, fmt, ##__VA_ARGS__)
+#define perror(str) \
+		rt_kprintf("[%s/%s] : %s", to_string(SERVER_NAME), TRACE_LEVEL_NAME[trERROR], str)
 
 bool trace_init_main(char * thread_name);
 bool trace_init_thread(char * thread_name);
