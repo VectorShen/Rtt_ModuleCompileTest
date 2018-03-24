@@ -81,22 +81,4 @@ int rtt_putc(int ch, RTT_FILE *stream);
 int rtt_fputc(int ch, RTT_FILE *stream);
 int rtt_fputs(const char *s, RTT_FILE *stream);
 
-#if 0
-
-#define fopen   rtt_fopen
-#define fgets   rtt_fgets
-#define fclose  rtt_fclose
-#define fflush  rtt_fflush
-#define fread   rtt_fread
-#define fwrite  rtt_fwrite
-#define fseek   rtt_fseek
-#define ftell   rtt_ftell
-#define rewind  rtt_rewind
-#define fprintf rtt_fprintf
-#define putc    rtt_putc
-#define fputc   rtt_fputc
-#define fputs   rtt_fputs
-
-#endif
-
 #endif
